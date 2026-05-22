@@ -3,6 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Royal Coin">
+  <meta name="apple-mobile-web-app-title" content="Royal Coin">
+  <link rel="icon" type="image/jpeg" href="https://raw.githubusercontent.com/rakeshsingh27636-stack/royal-coin-server/main/icon.jpg">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/rakeshsingh27636-stack/royal-coin-server/main/icon.jpg">
+  
   <title>Royal Coin Toss App</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
@@ -10,7 +17,6 @@
   <style>
     :root { --gold-royal: #ffd700; --burgundy-dark: #120002; --burgundy-light: #3a0006; --glass-border: rgba(255, 215, 0, 0.3); }
     
-    /* UPDATED BODY FOR MOBILE NOTCH & BUTTONS */
     body { 
       font-family: 'Rajdhani', sans-serif; 
       background: var(--burgundy-dark); 
@@ -26,16 +32,11 @@
     .bg-coin { position: absolute; width: 25px; height: 25px; background: radial-gradient(circle at 30% 30%, #fffde7 0%, #ffd700 40%, #b8860b 100%); border-radius: 50%; border: 1px solid #daa520; box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4), inset 0 0 5px rgba(255, 255, 255, 0.8); opacity: 0.3; animation: floatCoin infinite linear alternate; }
     @keyframes floatCoin { 0% { transform: translateY(0) scale(1) rotateY(0deg); filter: brightness(0.8); } 100% { transform: translateY(-40px) scale(1.1) rotateY(180deg); filter: brightness(1.5); } }
     
-    /* UPDATED MOBILE APP CONTAINER (FULL SCREEN NO BORDER) */
     .mobile-app { 
-      width: 100%; 
-      max-width: 400px; 
-      height: 100vh; 
+      width: 100%; max-width: 400px; height: 100vh; 
       background: linear-gradient(180deg, rgba(43,0,5,0.95) 0%, rgba(8,0,1,0.95) 100%); 
-      border: none; 
-      padding: 15px 20px; box-sizing: border-box; 
-      box-shadow: inset 0 0 30px rgba(0, 0, 0, 1); 
-      display: flex; flex-direction: column; justify-content: space-between; 
+      border: none; padding: 15px 20px; box-sizing: border-box; 
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 1); display: flex; flex-direction: column; justify-content: space-between; 
       position: relative; overflow: hidden; z-index: 10; backdrop-filter: blur(10px); 
     }
     
@@ -109,7 +110,6 @@
     #login-screen { display: flex; z-index: 200; }
     .logo-coin { font-size: 60px; margin-bottom: 10px; animation: floatCoin 2s infinite alternate; }
     .note-text { color: #ff3366; font-size: 11px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;}
-    .success-text { color: #00ff99; font-size: 11px; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; display: none;}
   </style>
 </head>
 <body>
@@ -121,15 +121,15 @@
     <div class="modal-overlay" id="login-screen">
       <div class="modal-card">
         <div class="logo-coin">🪙</div>
-        <h2>ROYAL CASINO</h2>
-        <p style="color:#bbb; font-size:12px; margin-bottom:20px;">Register to create your Wallet</p>
+        <h2 id="login-title">ROYAL CASINO</h2>
+        <p id="login-subtitle" style="color:#bbb; font-size:12px; margin-bottom:20px;">Register to create your Wallet</p>
         
         <div class="modal-row">
           <input type="text" id="user-name" class="login-input" placeholder="Enter Full Name" />
           <input type="number" id="user-mobile" class="login-input" placeholder="Mobile Number" />
-          <button class="hub-btn deposit-btn" onclick="startAppSession()">CREATE ID & PLAY</button>
+          <button class="hub-btn deposit-btn" id="btn-login" onclick="startAppSession()">CREATE ID & PLAY</button>
         </div>
-        <p class="note-text" id="login-error" style="display:none;">Please fill both fields!</p>
+        <p class="note-text" id="login-error" style="display:none;">Please fill required fields!</p>
       </div>
     </div>
 
@@ -243,7 +243,6 @@
   </div>
 
   <script>
-    // BG Coins Generation
     const bgContainer = document.getElementById('bg-coins-container');
     for(let i=0; i<15; i++){
         let c = document.createElement('div'); c.className = 'bg-coin';
@@ -252,11 +251,60 @@
         bgContainer.appendChild(c);
     }
 
-    // SERVER CONNECTION AUTO-DETECT
     const socket = io(); 
 
     let currentBalance = 0; let selectedWager = 100; let lockedSide = null;
     let userName = ""; let userPhone = "";
+
+    // DYNAMIC LOGIN LOGIC (Local Storage)
+    let savedName = localStorage.getItem('royalUserName');
+    let savedPhone = localStorage.getItem('royalUserPhone');
+
+    window.onload = () => {
+        if(savedPhone) {
+            // User pehle aa chuka hai, Sirf number mangenge
+            document.getElementById('user-name').style.display = 'none';
+            document.getElementById('login-title').innerText = "WELCOME BACK";
+            document.getElementById('login-subtitle').innerText = "Enter mobile number to login";
+            document.getElementById('btn-login').innerText = "SECURE LOGIN";
+        }
+    };
+
+    function startAppSession() {
+        let nameInput = document.getElementById('user-name').value;
+        let phoneInput = document.getElementById('user-mobile').value;
+        let errorTxt = document.getElementById('login-error');
+
+        if(savedPhone) {
+            // LOGIN MODE
+            if(phoneInput === savedPhone) {
+                userName = savedName; 
+                userPhone = savedPhone;
+                finalizeLogin();
+            } else {
+                errorTxt.innerText = "Number not registered on this device!";
+                errorTxt.style.display = "block";
+            }
+        } else {
+            // REGISTER MODE
+            if(nameInput.trim() === "" || phoneInput.trim() === "") { 
+                errorTxt.innerText = "Please fill both fields!";
+                errorTxt.style.display = "block";
+                return; 
+            }
+            localStorage.setItem('royalUserName', nameInput);
+            localStorage.setItem('royalUserPhone', phoneInput);
+            userName = nameInput; 
+            userPhone = phoneInput;
+            finalizeLogin();
+        }
+    }
+
+    function finalizeLogin() {
+        document.getElementById("player-display-name").innerHTML = userName;
+        document.getElementById("login-screen").style.display = "none";
+        if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
+    }
 
     // AUDIO LOGIC
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -290,15 +338,7 @@
         if(active) requestAnimationFrame(updateGoldRain);
     }
 
-    // LOGIN & FUNDS LOGIC
-    function startAppSession() {
-        let name = document.getElementById("user-name").value; let phone = document.getElementById("user-mobile").value;
-        if(name.trim() === "" || phone.trim() === "") { document.getElementById("login-error").style.display = "block"; return; }
-        if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
-        userName = name; userPhone = phone; document.getElementById("player-display-name").innerHTML = userName;
-        document.getElementById("login-screen").style.display = "none";
-    }
-
+    // FUNDS LOGIC
     function toggleModal(id, show) { playSound('click'); document.getElementById(id).style.display = show ? "flex" : "none"; }
     function backToFundsMain() { document.getElementById("funds-main").style.display = "block"; document.getElementById("deposit-screen").style.display = "none"; document.getElementById("withdraw-screen").style.display = "none"; }
     function openDeposit() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("deposit-screen").style.display = "block"; }
@@ -327,7 +367,7 @@
         toggleModal('fundsModal', false); backToFundsMain();
     }
 
-    // WAGER & SIDE LOGIC
+    // WAGER LOGIC
     function validateWager() {
         let inputField = document.getElementById("wager-input"); let typedVal = parseInt(inputField.value);
         if (isNaN(typedVal) || typedVal < 50) { typedVal = 50; }
