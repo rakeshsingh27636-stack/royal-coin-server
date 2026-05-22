@@ -2,20 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Royal Coin Toss App</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-  <script src="https://royal-coin-server.onrender.com/socket.io/socket.io.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
 
   <style>
-    /* ... (Purana saara CSS same rahega) ... */
     :root { --gold-royal: #ffd700; --burgundy-dark: #120002; --burgundy-light: #3a0006; --glass-border: rgba(255, 215, 0, 0.3); }
-    body { font-family: 'Rajdhani', sans-serif; background: var(--burgundy-dark); background-image: radial-gradient(circle at 50% 40%, var(--burgundy-light) 0%, var(--burgundy-dark) 80%); color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+    
+    /* UPDATED BODY FOR MOBILE NOTCH & BUTTONS */
+    body { 
+      font-family: 'Rajdhani', sans-serif; 
+      background: var(--burgundy-dark); 
+      background-image: radial-gradient(circle at 50% 40%, var(--burgundy-light) 0%, var(--burgundy-dark) 80%); 
+      color: #fff; display: flex; justify-content: center; align-items: center; 
+      min-height: 100vh; margin: 0; overflow: hidden; 
+      padding-top: env(safe-area-inset-top); 
+      padding-bottom: env(safe-area-inset-bottom);
+      box-sizing: border-box;
+    }
+    
     #bg-coins-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 1; }
     .bg-coin { position: absolute; width: 25px; height: 25px; background: radial-gradient(circle at 30% 30%, #fffde7 0%, #ffd700 40%, #b8860b 100%); border-radius: 50%; border: 1px solid #daa520; box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4), inset 0 0 5px rgba(255, 255, 255, 0.8); opacity: 0.3; animation: floatCoin infinite linear alternate; }
     @keyframes floatCoin { 0% { transform: translateY(0) scale(1) rotateY(0deg); filter: brightness(0.8); } 100% { transform: translateY(-40px) scale(1.1) rotateY(180deg); filter: brightness(1.5); } }
-    .mobile-app { width: 380px; height: 760px; background: linear-gradient(180deg, rgba(43,0,5,0.95) 0%, rgba(8,0,1,0.95) 100%); border: 3px solid var(--gold-royal); border-radius: 40px; padding: 15px 20px; box-sizing: border-box; box-shadow: 0 0 60px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 1); display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; z-index: 10; backdrop-filter: blur(10px); }
+    
+    /* UPDATED MOBILE APP CONTAINER (FULL SCREEN NO BORDER) */
+    .mobile-app { 
+      width: 100%; 
+      max-width: 400px; 
+      height: 100vh; 
+      background: linear-gradient(180deg, rgba(43,0,5,0.95) 0%, rgba(8,0,1,0.95) 100%); 
+      border: none; 
+      padding: 15px 20px; box-sizing: border-box; 
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 1); 
+      display: flex; flex-direction: column; justify-content: space-between; 
+      position: relative; overflow: hidden; z-index: 10; backdrop-filter: blur(10px); 
+    }
+    
     #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+    
     .header h1 { font-family: 'Orbitron', sans-serif; margin: 0; font-size: 24px; color: var(--gold-royal); text-shadow: 0 0 15px rgba(255, 215, 0, 0.9); letter-spacing: 1px; text-align: center; }
     .fair-badge { font-family: 'Orbitron', sans-serif; font-size: 10px; color: #00ff99; text-align: center; margin-top: 2px; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 5px rgba(0,255,153,0.5); }
     .top-balance-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 12px; border: 1px solid var(--glass-border); }
@@ -23,13 +48,15 @@
     .account-label { font-size: 10px; color: #aaa; text-transform: uppercase; }
     .balance-display { font-size: 16px; color: var(--gold-royal); font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.5);}
     .funds-nav-btn { background: linear-gradient(135deg, #d49a00 0%, #ffd700 50%, #d49a00 100%); border: 1px solid #fff; color: #000; padding: 6px 14px; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 900; cursor: pointer; box-shadow: 0 0 15px rgba(255,215,0,0.5); transition: 0.2s; }
+    
     .vs-panel { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--glass-border); border-radius: 15px; padding: 10px 12px; margin-top: 8px; }
     .profile { text-align: center; width: 42%; }
     .avatar { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--gold-royal); box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: #150002; }
     .bot-avatar { border-color: #ff3366; box-shadow: 0 0 15px rgba(255, 51, 102, 0.4); }
     .name { font-size: 13px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
     .vs-text { font-family: 'Orbitron', sans-serif; font-size: 18px; color: var(--gold-royal); font-style: italic; text-shadow: 0 0 8px rgba(255,215,0,0.5);}
-    .coin-container { perspective: 1200px; display: flex; justify-content: center; align-items: center; flex-grow: 1; }
+    
+    .coin-container { perspective: 1200px; display: flex; justify-content: center; align-items: center; flex-grow: 1; min-height: 150px; }
     .coin { width: 145px; height: 145px; position: relative; transform-style: preserve-3d; border-radius: 50%; box-shadow: 0 20px 40px rgba(0,0,0,0.9); }
     .coin-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Orbitron', sans-serif; font-size: 28px; font-weight: 900; border: 8px solid #c59b00; box-sizing: border-box; box-shadow: inset 0 0 20px rgba(255,255,255,0.4), inset 0 0 40px rgba(184, 134, 11, 0.8); }
     .coin-heads { background: radial-gradient(circle at 30% 30%, #fffde7 0%, #ffd700 40%, #aa7a00 100%); color: #3a2700; transform: rotateY(0deg); text-shadow: 1px 1px 0px rgba(255,255,255,0.6); }
@@ -38,29 +65,35 @@
     @keyframes spinCoin { 0% { transform: rotateY(0deg) translateY(0); } 50% { transform: rotateY(180deg) translateY(-20px); } 100% { transform: rotateY(360deg) translateY(0); } }
     .coin-stop-heads { transform: rotateY(0deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     .coin-stop-tails { transform: rotateY(180deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    
     .result-panel { background: rgba(0,0,0,0.7); border: 1px solid var(--glass-border); border-radius: 12px; padding: 10px; text-align: center; min-height: 38px; font-family: 'Orbitron', sans-serif; font-size: 14px; color: #ccc; margin-bottom: 10px; }
     .result-panel.win { border-color: #00ff99; color: #00ff99; background: rgba(0, 255, 153, 0.1); box-shadow: 0 0 20px rgba(0,255,153,0.4); text-shadow: 0 0 8px rgba(0,255,153,0.6); }
     .result-panel.loss { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); box-shadow: 0 0 20px rgba(255,51,102,0.4); text-shadow: 0 0 8px rgba(255,51,102,0.6); }
+    
     .controls { background: rgba(0,0,0,0.6); border: 1px solid var(--glass-border); border-radius: 18px; padding: 12px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);}
     .wager-selector { display: flex; justify-content: space-between; align-items: center; background: #000; border: 1px solid #444; border-radius: 10px; padding: 4px 12px; margin-bottom: 12px; box-shadow: inset 0 0 10px rgba(255,215,0,0.1);}
     .wager-btn { background: transparent; border: none; color: var(--gold-royal); font-size: 24px; font-weight: bold; cursor: pointer; text-shadow: 0 0 5px var(--gold-royal);}
     .wager-value { font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--gold-royal); font-weight: bold; display: flex; align-items: center; justify-content: center;}
     #wager-input { background: transparent; border: none; border-bottom: 1px dashed var(--gold-royal); color: var(--gold-royal); font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: bold; width: 65px; text-align: center; outline: none; margin-left: 2px; text-shadow: 0 0 8px rgba(255,215,0,0.5); }
     #wager-input::-webkit-outer-spin-button, #wager-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    
     .side-row { display: flex; gap: 12px; margin-bottom: 12px; }
     .side-btn { flex: 1; padding: 12px 0; background: rgba(0,0,0,0.5); border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     .side-btn.heads-btn { border: 2px solid var(--gold-royal); color: var(--gold-royal); }
     .side-btn.tails-btn { border: 2px solid var(--gold-royal); color: var(--gold-royal); }
     .side-btn.heads-btn.selected { background: rgba(255, 215, 0, 0.3); color: #fff; box-shadow: 0 0 20px var(--gold-royal); border-color: #fff; }
     .side-btn.tails-btn.selected { background: rgba(255, 215, 0, 0.3); color: #fff; box-shadow: 0 0 20px var(--gold-royal); border-color: #fff; }
+    
     .action-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; background: linear-gradient(90deg, #00994d 0%, #00ff99 50%, #00994d 100%); color: #000; font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 900; text-transform: uppercase; cursor: pointer; box-shadow: 0 5px 20px rgba(0,255,153,0.5); transition: 0.2s; margin-bottom: 8px; }
     .pvp-btn { width: 100%; padding: 10px; border: 1px solid #00f0ff; border-radius: 8px; background: rgba(0,240,255,0.1); color: #00f0ff; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
     .pvp-btn:hover { background: rgba(0,240,255,0.3); box-shadow: 0 0 15px #00f0ff; color: #fff; }
+    
     .live-ticker-patti { background: linear-gradient(90deg, rgba(255,215,0,0.05), rgba(0,0,0,0.9), rgba(255,215,0,0.05)); border-top: 1px solid rgba(255, 215, 0, 0.3); height: 26px; overflow: hidden; position: relative; display: flex; align-items: center; margin-top: 10px; border-radius: 5px; }
     .ticker-wrap { width: 100%; overflow: hidden; white-space: nowrap; }
     .ticker-text { display: inline-block; padding-left: 100%; font-size: 12px; font-weight: bold; color: #00ff99; font-family: 'Orbitron', sans-serif; animation: marquee 12s infinite linear; }
     @keyframes marquee { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
-    .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 100; border-radius: 40px; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(8px); }
+    
+    .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 100; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(8px); }
     .modal-card { width: 100%; background: #250006; border: 2px solid var(--gold-royal); border-radius: 20px; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(255,215,0,0.3); }
     .modal-card h2 { font-family: 'Orbitron', sans-serif; color: var(--gold-royal); margin: 0; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
     .modal-row { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
@@ -69,11 +102,11 @@
     .withdraw-btn { background: linear-gradient(90deg, #ff416c, #ff4b2b); color: #fff; box-shadow: 0 0 15px rgba(255, 75, 43, 0.4);}
     .pvp-action-btn { background: linear-gradient(90deg, var(--gold-royal), #ff9900); color: #000; }
     .close-modal { color: #aaa; font-size: 12px; margin-top: 20px; cursor: pointer; text-decoration: underline; text-transform: uppercase;}
-    #join-code-input, .login-input { padding: 12px; background: #000; border: 1px solid var(--gold-royal); color: var(--gold-royal); font-family: 'Orbitron'; font-size: 16px; text-align: center; border-radius: 5px; width: 90%; margin: 0 auto; outline: none; }
+    .login-input { padding: 12px; background: #000; border: 1px solid var(--gold-royal); color: var(--gold-royal); font-family: 'Orbitron'; font-size: 16px; text-align: center; border-radius: 5px; width: 90%; margin: 0 auto; outline: none; }
+    #join-code-input { padding: 12px; background: #000; border: 1px solid var(--gold-royal); color: var(--gold-royal); font-family: 'Orbitron'; font-size: 16px; text-align: center; border-radius: 5px; width: 90%; margin: 0 auto; outline: none; }
     .room-code-display { font-size: 28px; color: #00ff99; letter-spacing: 5px; font-family: 'Orbitron'; margin: 10px 0; text-shadow: 0 0 10px rgba(0,255,153,0.5);}
 
-    /* LOGIN SCREEN STYLES */
-    #login-screen { display: flex; /* Initially visible */ }
+    #login-screen { display: flex; z-index: 200; }
     .logo-coin { font-size: 60px; margin-bottom: 10px; animation: floatCoin 2s infinite alternate; }
     .note-text { color: #ff3366; font-size: 11px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;}
     .success-text { color: #00ff99; font-size: 11px; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; display: none;}
@@ -85,7 +118,7 @@
 
   <div class="mobile-app">
     
-    <div class="modal-overlay" id="login-screen" style="z-index: 200;">
+    <div class="modal-overlay" id="login-screen">
       <div class="modal-card">
         <div class="logo-coin">🪙</div>
         <h2>ROYAL CASINO</h2>
@@ -129,7 +162,7 @@
           <input type="text" id="withdraw-upi" class="login-input" placeholder="Enter UPI ID (eg. 987@ybl)" />
           <button class="hub-btn withdraw-btn" onclick="submitWithdrawal()">SUBMIT WITHDRAWAL</button>
         </div>
-        <p class="success-text" id="withdraw-note" style="display:block; color:#aaa;">Note: Amount will be credited to your bank account within 24 hours.</p>
+        <p style="color:#aaa; font-size:11px; margin-top:10px;">Note: Amount will be credited to your bank account within 24 hours.</p>
         <div class="close-modal" onclick="backToFundsMain()">Back</div>
       </div>
     </div>
@@ -151,7 +184,7 @@
         <p style="color:#bbb; font-size:12px;">Ask friend to enter this code:</p>
         <div class="room-code-display" id="my-room-code">----</div>
         <p style="color:#00f0ff; font-size:12px;" id="room-wager-info"></p>
-        <div class="modal-loader" style="margin-top:10px;">⏳ Waiting for friend...</div>
+        <div style="color:#ffd700; margin-top:10px; font-size: 14px;">⏳ Waiting for friend...</div>
       </div>
     </div>
 
@@ -210,6 +243,7 @@
   </div>
 
   <script>
+    // BG Coins Generation
     const bgContainer = document.getElementById('bg-coins-container');
     for(let i=0; i<15; i++){
         let c = document.createElement('div'); c.className = 'bg-coin';
@@ -218,82 +252,17 @@
         bgContainer.appendChild(c);
     }
 
-    const socket = io('http://localhost:3000');
+    // SERVER CONNECTION AUTO-DETECT
+    const socket = io(); 
+
     let currentBalance = 0; let selectedWager = 100; let lockedSide = null;
     let userName = ""; let userPhone = "";
 
-    // LOGIN SYSTEM (Mock Database Entry)
-    function startAppSession() {
-        let name = document.getElementById("user-name").value;
-        let phone = document.getElementById("user-mobile").value;
-        
-        if(name.trim() === "" || phone.trim() === "") {
-            document.getElementById("login-error").style.display = "block";
-            return;
-        }
-        
-        userName = name; userPhone = phone;
-        document.getElementById("player-display-name").innerHTML = userName;
-        
-        // Hide login screen
-        document.getElementById("login-screen").style.display = "none";
-        
-        // Asali app me yahan se data Database (MongoDB) me jata hai.
-        alert(`Welcome ${userName}! ID created successfully.`);
-    }
-
-    // FUNDS NAVIGATION
-    function backToFundsMain() {
-        document.getElementById("funds-main").style.display = "block";
-        document.getElementById("deposit-screen").style.display = "none";
-        document.getElementById("withdraw-screen").style.display = "none";
-    }
-    function openDeposit() {
-        document.getElementById("funds-main").style.display = "none";
-        document.getElementById("deposit-screen").style.display = "block";
-    }
-    function openWithdraw() {
-        document.getElementById("funds-main").style.display = "none";
-        document.getElementById("withdraw-screen").style.display = "block";
-    }
-
-    // PAYMENT GATEWAY & WITHDRAW LOGIC
-    function triggerPaymentGateway() {
-        let amount = parseInt(document.getElementById("deposit-amount").value);
-        if(isNaN(amount) || amount <= 0) return alert("Enter valid amount");
-        
-        // Yahan Razorpay ka asali code khulta hai. Abhi ke liye simulation:
-        playSound('click');
-        setTimeout(() => {
-            alert(`✅ PAYMENT SUCCESSFUL via Gateway!\n₹${amount} added to wallet.`);
-            
-            // Send to server to update balance
-            socket.emit('depositFunds', { amount: amount });
-            toggleModal('fundsModal', false);
-            backToFundsMain();
-        }, 1000); // 1 second fake delay for gateway loading
-    }
-
-    function submitWithdrawal() {
-        let amount = parseInt(document.getElementById("withdraw-amount").value);
-        let upiId = document.getElementById("withdraw-upi").value;
-
-        if(isNaN(amount) || amount < 100) return alert("Minimum withdrawal is ₹100");
-        if(upiId.trim() === "") return alert("Please enter valid UPI ID");
-        if(amount > currentBalance) return alert("Insufficient Winnings!");
-
-        playSound('click');
-        socket.emit('withdrawFunds', { amount: amount, upi: upiId });
-        alert(`Request Submitted!\n₹${amount} will be credited to ${upiId} within 24 hours.`);
-        toggleModal('fundsModal', false);
-        backToFundsMain();
-    }
-
-
-    // --- (Baaki Audio, Particles, PvP, and Logic exactly same hai) ---
+    // AUDIO LOGIC
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(type) {
         try {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
             if(type === 'click') { osc.frequency.setValueAtTime(800, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05); osc.start(); osc.stop(audioCtx.currentTime + 0.05); }
@@ -303,8 +272,11 @@
         } catch(e) {}
     }
 
+    // GOLD RAIN LOGIC
     const canvas = document.getElementById("confetti-canvas"); const ctx = canvas.getContext("2d");
-    let particles = []; canvas.width = 340; canvas.height = 720;
+    let particles = [];
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resizeCanvas); resizeCanvas();
     function spawnGoldRain() {
         particles = [];
         for(let i=0; i<45; i++) { particles.push({ x: Math.random() * canvas.width, y: Math.random() * -200 - 50, r: Math.random() * 8 + 10, tilt: Math.random() * Math.PI, tiltSpeed: Math.random() * 0.2 + 0.05, speedY: Math.random() * 4 + 3 }); }
@@ -318,32 +290,44 @@
         if(active) requestAnimationFrame(updateGoldRain);
     }
 
+    // LOGIN & FUNDS LOGIC
+    function startAppSession() {
+        let name = document.getElementById("user-name").value; let phone = document.getElementById("user-mobile").value;
+        if(name.trim() === "" || phone.trim() === "") { document.getElementById("login-error").style.display = "block"; return; }
+        if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
+        userName = name; userPhone = phone; document.getElementById("player-display-name").innerHTML = userName;
+        document.getElementById("login-screen").style.display = "none";
+    }
+
     function toggleModal(id, show) { playSound('click'); document.getElementById(id).style.display = show ? "flex" : "none"; }
-    function openPvPMenu() { validateWager(); if(!lockedSide) { alert("Pehle HEADS ya TAILS select kijiye!"); return; } document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
+    function backToFundsMain() { document.getElementById("funds-main").style.display = "block"; document.getElementById("deposit-screen").style.display = "none"; document.getElementById("withdraw-screen").style.display = "none"; }
+    function openDeposit() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("deposit-screen").style.display = "block"; }
+    function openWithdraw() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("withdraw-screen").style.display = "block"; }
 
-    socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
-    socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); });
-
-    function createRoom() { if(selectedWager > currentBalance) { alert("Balance kam hai!"); return; } socket.emit('createRoom', { amount: selectedWager, side: lockedSide }); }
-    socket.on('roomCreated', (data) => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerHTML = data.code; document.getElementById('room-wager-info').innerHTML = `Wager: ₹${data.wager} | Your Side: ${data.side.toUpperCase()}`; });
-    function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code }); } else { alert("4-Digit Code dalo!"); } }
-    
-    socket.on('pvpMatchStarted', (data) => { toggleModal('pvpModal', false); document.getElementById("status-terminal").innerHTML = data.message; document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; document.getElementById("bot-img").innerHTML = "😎"; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "COIN IN THE AIR... TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
-    socket.on('matchmakingStarted', (data) => { document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; document.getElementById("bot-name").innerHTML = data.bot.name; document.getElementById("bot-img").innerHTML = data.bot.avatar; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
-
-    socket.on('gameResult', (data) => {
-        const coin = document.getElementById("coin-object"); const term = document.getElementById("status-terminal");
-        if(data.tossResult === 'heads') { coin.className = "coin coin-stop-heads"; } else { coin.className = "coin coin-stop-tails"; }
+    function triggerPaymentGateway() {
+        let amount = parseInt(document.getElementById("deposit-amount").value);
+        if(isNaN(amount) || amount <= 0) return alert("Enter valid amount");
+        playSound('click');
         setTimeout(() => {
-            if(data.status === 'won') { playSound('win'); spawnGoldRain(); term.className = "result-panel win"; term.innerHTML = `WIN! 🎉 Result: ${data.tossResult.toUpperCase()}`; } 
-            else { playSound('loss'); term.className = "result-panel loss"; term.innerHTML = `LOSS! 😢 Result: ${data.tossResult.toUpperCase()}`; }
-            currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00";
-            validateWager(); document.getElementById("toss-button").disabled = false;
-        }, 600);
-    });
+            alert(`✅ PAYMENT SUCCESSFUL!\n₹${amount} added to wallet.`);
+            socket.emit('depositFunds', { amount: amount });
+            toggleModal('fundsModal', false); backToFundsMain();
+        }, 800); 
+    }
 
-    socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; });
+    function submitWithdrawal() {
+        let amount = parseInt(document.getElementById("withdraw-amount").value);
+        let upiId = document.getElementById("withdraw-upi").value;
+        if(isNaN(amount) || amount < 100) return alert("Minimum withdrawal is ₹100");
+        if(upiId.trim() === "") return alert("Please enter valid UPI ID");
+        if(amount > currentBalance) return alert("Insufficient Winnings!");
+        playSound('click');
+        socket.emit('withdrawFunds', { amount: amount, upi: upiId });
+        alert(`Request Submitted!\n₹${amount} will be credited to ${upiId} within 24 hours.`);
+        toggleModal('fundsModal', false); backToFundsMain();
+    }
 
+    // WAGER & SIDE LOGIC
     function validateWager() {
         let inputField = document.getElementById("wager-input"); let typedVal = parseInt(inputField.value);
         if (isNaN(typedVal) || typedVal < 50) { typedVal = 50; }
@@ -367,6 +351,10 @@
         document.getElementById("btn-" + side).classList.add('selected'); document.getElementById("status-terminal").innerHTML = `LOCKED ON: ${side.toUpperCase()}`;
     }
 
+    // GAMEPLAY LOGIC
+    socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
+    socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); });
+    
     function startRoyalGame() {
         if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
         validateWager(); 
@@ -377,6 +365,29 @@
         document.getElementById("bot-name").innerHTML = "Searching..."; document.getElementById("bot-img").innerHTML = "⌛";
         socket.emit('placeBet', { side: lockedSide, amount: selectedWager });
     }
+
+    socket.on('matchmakingStarted', (data) => { document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; document.getElementById("bot-name").innerHTML = data.bot.name; document.getElementById("bot-img").innerHTML = data.bot.avatar; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+    
+    socket.on('gameResult', (data) => {
+        const coin = document.getElementById("coin-object"); const term = document.getElementById("status-terminal");
+        if(data.tossResult === 'heads') { coin.className = "coin coin-stop-heads"; } else { coin.className = "coin coin-stop-tails"; }
+        setTimeout(() => {
+            if(data.status === 'won') { playSound('win'); spawnGoldRain(); term.className = "result-panel win"; term.innerHTML = `WIN! 🎉 Result: ${data.tossResult.toUpperCase()}`; } 
+            else { playSound('loss'); term.className = "result-panel loss"; term.innerHTML = `LOSS! 😢 Result: ${data.tossResult.toUpperCase()}`; }
+            currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00";
+            validateWager(); document.getElementById("toss-button").disabled = false;
+        }, 600);
+    });
+
+    socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; });
+
+    // PVP LOGIC
+    function openPvPMenu() { validateWager(); if(!lockedSide) { alert("Pehle HEADS ya TAILS select kijiye!"); return; } document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
+    function createRoom() { if(selectedWager > currentBalance) { alert("Balance kam hai!"); return; } socket.emit('createRoom', { amount: selectedWager, side: lockedSide }); }
+    socket.on('roomCreated', (data) => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerHTML = data.code; document.getElementById('room-wager-info').innerHTML = `Wager: ₹${data.wager} | Your Side: ${data.side.toUpperCase()}`; });
+    function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code }); } else { alert("4-Digit Code dalo!"); } }
+    socket.on('pvpMatchStarted', (data) => { toggleModal('pvpModal', false); document.getElementById("status-terminal").innerHTML = data.message; document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; document.getElementById("bot-img").innerHTML = "😎"; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "COIN IN THE AIR... TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+
   </script>
 </body>
 </html>
