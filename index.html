@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Royal Coin Toss App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://royal-coin-server.onrender.com/socket.io/socket.io.js"></script>
+
+  <style>
+    /* ... (Purana saara CSS same rahega) ... */
+    :root { --gold-royal: #ffd700; --burgundy-dark: #120002; --burgundy-light: #3a0006; --glass-border: rgba(255, 215, 0, 0.3); }
+    body { font-family: 'Rajdhani', sans-serif; background: var(--burgundy-dark); background-image: radial-gradient(circle at 50% 40%, var(--burgundy-light) 0%, var(--burgundy-dark) 80%); color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+    #bg-coins-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 1; }
+    .bg-coin { position: absolute; width: 25px; height: 25px; background: radial-gradient(circle at 30% 30%, #fffde7 0%, #ffd700 40%, #b8860b 100%); border-radius: 50%; border: 1px solid #daa520; box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4), inset 0 0 5px rgba(255, 255, 255, 0.8); opacity: 0.3; animation: floatCoin infinite linear alternate; }
+    @keyframes floatCoin { 0% { transform: translateY(0) scale(1) rotateY(0deg); filter: brightness(0.8); } 100% { transform: translateY(-40px) scale(1.1) rotateY(180deg); filter: brightness(1.5); } }
+    .mobile-app { width: 380px; height: 760px; background: linear-gradient(180deg, rgba(43,0,5,0.95) 0%, rgba(8,0,1,0.95) 100%); border: 3px solid var(--gold-royal); border-radius: 40px; padding: 15px 20px; box-sizing: border-box; box-shadow: 0 0 60px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 1); display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; z-index: 10; backdrop-filter: blur(10px); }
+    #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+    .header h1 { font-family: 'Orbitron', sans-serif; margin: 0; font-size: 24px; color: var(--gold-royal); text-shadow: 0 0 15px rgba(255, 215, 0, 0.9); letter-spacing: 1px; text-align: center; }
+    .fair-badge { font-family: 'Orbitron', sans-serif; font-size: 10px; color: #00ff99; text-align: center; margin-top: 2px; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 5px rgba(0,255,153,0.5); }
+    .top-balance-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 12px; border: 1px solid var(--glass-border); }
+    .account-info { font-family: 'Orbitron', sans-serif; }
+    .account-label { font-size: 10px; color: #aaa; text-transform: uppercase; }
+    .balance-display { font-size: 16px; color: var(--gold-royal); font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.5);}
+    .funds-nav-btn { background: linear-gradient(135deg, #d49a00 0%, #ffd700 50%, #d49a00 100%); border: 1px solid #fff; color: #000; padding: 6px 14px; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 900; cursor: pointer; box-shadow: 0 0 15px rgba(255,215,0,0.5); transition: 0.2s; }
+    .vs-panel { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--glass-border); border-radius: 15px; padding: 10px 12px; margin-top: 8px; }
+    .profile { text-align: center; width: 42%; }
+    .avatar { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--gold-royal); box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: #150002; }
+    .bot-avatar { border-color: #ff3366; box-shadow: 0 0 15px rgba(255, 51, 102, 0.4); }
+    .name { font-size: 13px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .vs-text { font-family: 'Orbitron', sans-serif; font-size: 18px; color: var(--gold-royal); font-style: italic; text-shadow: 0 0 8px rgba(255,215,0,0.5);}
+    .coin-container { perspective: 1200px; display: flex; justify-content: center; align-items: center; flex-grow: 1; }
+    .coin { width: 145px; height: 145px; position: relative; transform-style: preserve-3d; border-radius: 50%; box-shadow: 0 20px 40px rgba(0,0,0,0.9); }
+    .coin-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Orbitron', sans-serif; font-size: 28px; font-weight: 900; border: 8px solid #c59b00; box-sizing: border-box; box-shadow: inset 0 0 20px rgba(255,255,255,0.4), inset 0 0 40px rgba(184, 134, 11, 0.8); }
+    .coin-heads { background: radial-gradient(circle at 30% 30%, #fffde7 0%, #ffd700 40%, #aa7a00 100%); color: #3a2700; transform: rotateY(0deg); text-shadow: 1px 1px 0px rgba(255,255,255,0.6); }
+    .coin-tails { background: radial-gradient(circle at 30% 30%, #ffffff 0%, #dcdcdc 40%, #888888 100%); color: #111; border-color: #a0a0a0; transform: rotateY(180deg); text-shadow: 1px 1px 0px rgba(255,255,255,0.8); box-shadow: inset 0 0 20px rgba(255,255,255,0.6), inset 0 0 40px rgba(100, 100, 100, 0.8); }
+    .coin.flipping { animation: spinCoin 0.18s infinite linear; }
+    @keyframes spinCoin { 0% { transform: rotateY(0deg) translateY(0); } 50% { transform: rotateY(180deg) translateY(-20px); } 100% { transform: rotateY(360deg) translateY(0); } }
+    .coin-stop-heads { transform: rotateY(0deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .coin-stop-tails { transform: rotateY(180deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .result-panel { background: rgba(0,0,0,0.7); border: 1px solid var(--glass-border); border-radius: 12px; padding: 10px; text-align: center; min-height: 38px; font-family: 'Orbitron', sans-serif; font-size: 14px; color: #ccc; margin-bottom: 10px; }
+    .result-panel.win { border-color: #00ff99; color: #00ff99; background: rgba(0, 255, 153, 0.1); box-shadow: 0 0 20px rgba(0,255,153,0.4); text-shadow: 0 0 8px rgba(0,255,153,0.6); }
+    .result-panel.loss { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); box-shadow: 0 0 20px rgba(255,51,102,0.4); text-shadow: 0 0 8px rgba(255,51,102,0.6); }
+    .controls { background: rgba(0,0,0,0.6); border: 1px solid var(--glass-border); border-radius: 18px; padding: 12px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);}
+    .wager-selector { display: flex; justify-content: space-between; align-items: center; background: #000; border: 1px solid #444; border-radius: 10px; padding: 4px 12px; margin-bottom: 12px; box-shadow: inset 0 0 10px rgba(255,215,0,0.1);}
+    .wager-btn { background: transparent; border: none; color: var(--gold-royal); font-size: 24px; font-weight: bold; cursor: pointer; text-shadow: 0 0 5px var(--gold-royal);}
+    .wager-value { font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--gold-royal); font-weight: bold; display: flex; align-items: center; justify-content: center;}
+    #wager-input { background: transparent; border: none; border-bottom: 1px dashed var(--gold-royal); color: var(--gold-royal); font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: bold; width: 65px; text-align: center; outline: none; margin-left: 2px; text-shadow: 0 0 8px rgba(255,215,0,0.5); }
+    #wager-input::-webkit-outer-spin-button, #wager-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .side-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .side-btn { flex: 1; padding: 12px 0; background: rgba(0,0,0,0.5); border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .side-btn.heads-btn { border: 2px solid var(--gold-royal); color: var(--gold-royal); }
+    .side-btn.tails-btn { border: 2px solid var(--gold-royal); color: var(--gold-royal); }
+    .side-btn.heads-btn.selected { background: rgba(255, 215, 0, 0.3); color: #fff; box-shadow: 0 0 20px var(--gold-royal); border-color: #fff; }
+    .side-btn.tails-btn.selected { background: rgba(255, 215, 0, 0.3); color: #fff; box-shadow: 0 0 20px var(--gold-royal); border-color: #fff; }
+    .action-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; background: linear-gradient(90deg, #00994d 0%, #00ff99 50%, #00994d 100%); color: #000; font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 900; text-transform: uppercase; cursor: pointer; box-shadow: 0 5px 20px rgba(0,255,153,0.5); transition: 0.2s; margin-bottom: 8px; }
+    .pvp-btn { width: 100%; padding: 10px; border: 1px solid #00f0ff; border-radius: 8px; background: rgba(0,240,255,0.1); color: #00f0ff; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
+    .pvp-btn:hover { background: rgba(0,240,255,0.3); box-shadow: 0 0 15px #00f0ff; color: #fff; }
+    .live-ticker-patti { background: linear-gradient(90deg, rgba(255,215,0,0.05), rgba(0,0,0,0.9), rgba(255,215,0,0.05)); border-top: 1px solid rgba(255, 215, 0, 0.3); height: 26px; overflow: hidden; position: relative; display: flex; align-items: center; margin-top: 10px; border-radius: 5px; }
+    .ticker-wrap { width: 100%; overflow: hidden; white-space: nowrap; }
+    .ticker-text { display: inline-block; padding-left: 100%; font-size: 12px; font-weight: bold; color: #00ff99; font-family: 'Orbitron', sans-serif; animation: marquee 12s infinite linear; }
+    @keyframes marquee { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+    .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 100; border-radius: 40px; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(8px); }
+    .modal-card { width: 100%; background: #250006; border: 2px solid var(--gold-royal); border-radius: 20px; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(255,215,0,0.3); }
+    .modal-card h2 { font-family: 'Orbitron', sans-serif; color: var(--gold-royal); margin: 0; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+    .modal-row { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+    .hub-btn { padding: 14px; border: 1px solid #fff; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+    .deposit-btn { background: linear-gradient(90deg, #00b4db, #00ff99); color: #000; box-shadow: 0 0 15px rgba(0, 255, 153, 0.4);}
+    .withdraw-btn { background: linear-gradient(90deg, #ff416c, #ff4b2b); color: #fff; box-shadow: 0 0 15px rgba(255, 75, 43, 0.4);}
+    .pvp-action-btn { background: linear-gradient(90deg, var(--gold-royal), #ff9900); color: #000; }
+    .close-modal { color: #aaa; font-size: 12px; margin-top: 20px; cursor: pointer; text-decoration: underline; text-transform: uppercase;}
+    #join-code-input, .login-input { padding: 12px; background: #000; border: 1px solid var(--gold-royal); color: var(--gold-royal); font-family: 'Orbitron'; font-size: 16px; text-align: center; border-radius: 5px; width: 90%; margin: 0 auto; outline: none; }
+    .room-code-display { font-size: 28px; color: #00ff99; letter-spacing: 5px; font-family: 'Orbitron'; margin: 10px 0; text-shadow: 0 0 10px rgba(0,255,153,0.5);}
+
+    /* LOGIN SCREEN STYLES */
+    #login-screen { display: flex; /* Initially visible */ }
+    .logo-coin { font-size: 60px; margin-bottom: 10px; animation: floatCoin 2s infinite alternate; }
+    .note-text { color: #ff3366; font-size: 11px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;}
+    .success-text { color: #00ff99; font-size: 11px; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; display: none;}
+  </style>
+</head>
+<body>
+
+  <div id="bg-coins-container"></div>
+
+  <div class="mobile-app">
+    
+    <div class="modal-overlay" id="login-screen" style="z-index: 200;">
+      <div class="modal-card">
+        <div class="logo-coin">🪙</div>
+        <h2>ROYAL CASINO</h2>
+        <p style="color:#bbb; font-size:12px; margin-bottom:20px;">Register to create your Wallet</p>
+        
+        <div class="modal-row">
+          <input type="text" id="user-name" class="login-input" placeholder="Enter Full Name" />
+          <input type="number" id="user-mobile" class="login-input" placeholder="Mobile Number" />
+          <button class="hub-btn deposit-btn" onclick="startAppSession()">CREATE ID & PLAY</button>
+        </div>
+        <p class="note-text" id="login-error" style="display:none;">Please fill both fields!</p>
+      </div>
+    </div>
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <div class="modal-overlay" id="fundsModal">
+      <div class="modal-card" id="funds-main">
+        <h2>ROYAL WALLET</h2>
+        <p style="color: #bbb; font-size: 13px; margin: 5px 0 0 0;">Add or Cashout Real Money</p>
+        <div class="modal-row">
+          <button class="hub-btn deposit-btn" onclick="openDeposit()">📥 Add Funds (Deposit)</button>
+          <button class="hub-btn withdraw-btn" onclick="openWithdraw()">📤 Withdraw to Bank</button>
+        </div>
+        <div class="close-modal" onclick="toggleModal('fundsModal', false)">Go Back to Game</div>
+      </div>
+
+      <div class="modal-card" id="deposit-screen" style="display:none;">
+        <h2>DEPOSIT FUNDS</h2>
+        <div class="modal-row">
+          <input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" value="500"/>
+          <button class="hub-btn deposit-btn" onclick="triggerPaymentGateway()">PAY VIA RAZORPAY / UPI</button>
+        </div>
+        <div class="close-modal" onclick="backToFundsMain()">Back</div>
+      </div>
+
+      <div class="modal-card" id="withdraw-screen" style="display:none;">
+        <h2>WITHDRAW WINNINGS</h2>
+        <div class="modal-row">
+          <input type="number" id="withdraw-amount" class="login-input" placeholder="Amount to Withdraw" value="100"/>
+          <input type="text" id="withdraw-upi" class="login-input" placeholder="Enter UPI ID (eg. 987@ybl)" />
+          <button class="hub-btn withdraw-btn" onclick="submitWithdrawal()">SUBMIT WITHDRAWAL</button>
+        </div>
+        <p class="success-text" id="withdraw-note" style="display:block; color:#aaa;">Note: Amount will be credited to your bank account within 24 hours.</p>
+        <div class="close-modal" onclick="backToFundsMain()">Back</div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="pvpModal">
+      <div class="modal-card" id="pvp-options">
+        <h2>PLAY WITH FRIEND</h2>
+        <p style="color:#bbb; font-size:12px;">Rules: Host sets Wager & Side.</p>
+        <div class="modal-row">
+          <button class="hub-btn pvp-action-btn" onclick="createRoom()">🏠 Create Room (Host)</button>
+          <p style="color:#aaa; font-size:12px; margin:0;">OR</p>
+          <input type="number" id="join-code-input" placeholder="Enter 4-Digit Code" />
+          <button class="hub-btn deposit-btn" onclick="joinRoom()">🤝 Join Room</button>
+        </div>
+        <div class="close-modal" onclick="toggleModal('pvpModal', false)">Cancel</div>
+      </div>
+      <div class="modal-card" id="pvp-waiting" style="display:none;">
+        <h2>ROOM CREATED</h2>
+        <p style="color:#bbb; font-size:12px;">Ask friend to enter this code:</p>
+        <div class="room-code-display" id="my-room-code">----</div>
+        <p style="color:#00f0ff; font-size:12px;" id="room-wager-info"></p>
+        <div class="modal-loader" style="margin-top:10px;">⏳ Waiting for friend...</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="header"><h1>ROYAL COIN TOSS</h1></div>
+      <div class="fair-badge">🔒 Provably Fair RNG Secured</div>
+      <div class="top-balance-bar">
+        <div class="account-info">
+          <div class="account-label">Account Balance</div>
+          <div class="balance-display" id="balance-txt">₹0.00</div>
+        </div>
+        <button class="funds-nav-btn" onclick="toggleModal('fundsModal', true)">💰 FUNDS</button>
+      </div>
+    </div>
+
+    <div class="vs-panel">
+      <div class="profile">
+        <div class="avatar bot-avatar" id="bot-img">🤖</div>
+        <div class="name" id="bot-name">SYS.SCAN...</div>
+      </div>
+      <div class="vs-text">VS</div>
+      <div class="profile">
+        <div class="avatar">👨‍💻</div>
+        <div class="name" id="player-display-name">Guest</div>
+      </div>
+    </div>
+
+    <div class="coin-container">
+      <div class="coin" id="coin-object">
+        <div class="coin-face coin-heads">HEADS</div>
+        <div class="coin-face coin-tails">TAILS</div>
+      </div>
+    </div>
+
+    <div class="result-panel" id="status-terminal">AWAITING PREDICTION...</div>
+
+    <div>
+      <div class="controls">
+        <div class="wager-selector">
+          <button class="wager-btn" onclick="changeWager(-50)">-</button>
+          <span class="wager-value">Wager: ₹ <input type="number" id="wager-input" value="100" onfocus="this.value=''" onblur="validateWager()"/></span>
+          <button class="wager-btn" onclick="changeWager(50)">+</button>
+        </div>
+        <div class="side-row">
+          <button id="btn-heads" class="side-btn heads-btn" onclick="selectSide('heads')">HEADS</button>
+          <button id="btn-tails" class="side-btn tails-btn" onclick="selectSide('tails')">TAILS</button>
+        </div>
+        <button class="action-btn" id="toss-button" onclick="startRoyalGame()">BET & TOSS GLOBAL</button>
+        <button class="pvp-btn" onclick="openPvPMenu()">⚔️ PLAY WITH FRIEND</button>
+      </div>
+
+      <div class="live-ticker-patti">
+        <div class="ticker-wrap"><div class="ticker-text" id="patti-txt">⚡ Connecting Live Rooms...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const bgContainer = document.getElementById('bg-coins-container');
+    for(let i=0; i<15; i++){
+        let c = document.createElement('div'); c.className = 'bg-coin';
+        c.style.left = Math.random() * 100 + '%'; c.style.top = Math.random() * 100 + '%';
+        c.style.animationDuration = (Math.random() * 4 + 3) + 's'; c.style.animationDelay = '-' + (Math.random() * 5) + 's';
+        bgContainer.appendChild(c);
+    }
+
+    const socket = io('http://localhost:3000');
+    let currentBalance = 0; let selectedWager = 100; let lockedSide = null;
+    let userName = ""; let userPhone = "";
+
+    // LOGIN SYSTEM (Mock Database Entry)
+    function startAppSession() {
+        let name = document.getElementById("user-name").value;
+        let phone = document.getElementById("user-mobile").value;
+        
+        if(name.trim() === "" || phone.trim() === "") {
+            document.getElementById("login-error").style.display = "block";
+            return;
+        }
+        
+        userName = name; userPhone = phone;
+        document.getElementById("player-display-name").innerHTML = userName;
+        
+        // Hide login screen
+        document.getElementById("login-screen").style.display = "none";
+        
+        // Asali app me yahan se data Database (MongoDB) me jata hai.
+        alert(`Welcome ${userName}! ID created successfully.`);
+    }
+
+    // FUNDS NAVIGATION
+    function backToFundsMain() {
+        document.getElementById("funds-main").style.display = "block";
+        document.getElementById("deposit-screen").style.display = "none";
+        document.getElementById("withdraw-screen").style.display = "none";
+    }
+    function openDeposit() {
+        document.getElementById("funds-main").style.display = "none";
+        document.getElementById("deposit-screen").style.display = "block";
+    }
+    function openWithdraw() {
+        document.getElementById("funds-main").style.display = "none";
+        document.getElementById("withdraw-screen").style.display = "block";
+    }
+
+    // PAYMENT GATEWAY & WITHDRAW LOGIC
+    function triggerPaymentGateway() {
+        let amount = parseInt(document.getElementById("deposit-amount").value);
+        if(isNaN(amount) || amount <= 0) return alert("Enter valid amount");
+        
+        // Yahan Razorpay ka asali code khulta hai. Abhi ke liye simulation:
+        playSound('click');
+        setTimeout(() => {
+            alert(`✅ PAYMENT SUCCESSFUL via Gateway!\n₹${amount} added to wallet.`);
+            
+            // Send to server to update balance
+            socket.emit('depositFunds', { amount: amount });
+            toggleModal('fundsModal', false);
+            backToFundsMain();
+        }, 1000); // 1 second fake delay for gateway loading
+    }
+
+    function submitWithdrawal() {
+        let amount = parseInt(document.getElementById("withdraw-amount").value);
+        let upiId = document.getElementById("withdraw-upi").value;
+
+        if(isNaN(amount) || amount < 100) return alert("Minimum withdrawal is ₹100");
+        if(upiId.trim() === "") return alert("Please enter valid UPI ID");
+        if(amount > currentBalance) return alert("Insufficient Winnings!");
+
+        playSound('click');
+        socket.emit('withdrawFunds', { amount: amount, upi: upiId });
+        alert(`Request Submitted!\n₹${amount} will be credited to ${upiId} within 24 hours.`);
+        toggleModal('fundsModal', false);
+        backToFundsMain();
+    }
+
+
+    // --- (Baaki Audio, Particles, PvP, and Logic exactly same hai) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        try {
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            if(type === 'click') { osc.frequency.setValueAtTime(800, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05); osc.start(); osc.stop(audioCtx.currentTime + 0.05); }
+            else if(type === 'flip') { osc.type = 'triangle'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.3); gain.gain.setValueAtTime(0.05, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.3); }
+            else if(type === 'win') { osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); const osc2 = audioCtx.createOscillator(); const gain2 = audioCtx.createGain(); osc2.connect(gain2); gain2.connect(audioCtx.destination); osc2.frequency.setValueAtTime(880, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain2.gain.setValueAtTime(0.08, audioCtx.currentTime); osc.start(); osc2.start(); osc.stop(audioCtx.currentTime + 0.4); osc2.stop(audioCtx.currentTime + 0.4); }
+            else if(type === 'loss') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.4); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
+        } catch(e) {}
+    }
+
+    const canvas = document.getElementById("confetti-canvas"); const ctx = canvas.getContext("2d");
+    let particles = []; canvas.width = 340; canvas.height = 720;
+    function spawnGoldRain() {
+        particles = [];
+        for(let i=0; i<45; i++) { particles.push({ x: Math.random() * canvas.width, y: Math.random() * -200 - 50, r: Math.random() * 8 + 10, tilt: Math.random() * Math.PI, tiltSpeed: Math.random() * 0.2 + 0.05, speedY: Math.random() * 4 + 3 }); }
+        requestAnimationFrame(updateGoldRain);
+    }
+    function updateGoldRain() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); let active = false;
+        particles.forEach(p => {
+            p.y += p.speedY; p.tilt += p.tiltSpeed; ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, Math.abs(Math.sin(p.tilt))); ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 2 * Math.PI); let grad = ctx.createLinearGradient(-p.r, -p.r, p.r, p.r); grad.addColorStop(0, "#fffde7"); grad.addColorStop(0.3, "#ffd700"); grad.addColorStop(1, "#b8860b"); ctx.fillStyle = grad; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = "#8a6300"; ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, p.r * 0.7, 0, 2 * Math.PI); ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.stroke(); ctx.restore(); if(p.y < canvas.height + 50) active = true;
+        });
+        if(active) requestAnimationFrame(updateGoldRain);
+    }
+
+    function toggleModal(id, show) { playSound('click'); document.getElementById(id).style.display = show ? "flex" : "none"; }
+    function openPvPMenu() { validateWager(); if(!lockedSide) { alert("Pehle HEADS ya TAILS select kijiye!"); return; } document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
+
+    socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
+    socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); });
+
+    function createRoom() { if(selectedWager > currentBalance) { alert("Balance kam hai!"); return; } socket.emit('createRoom', { amount: selectedWager, side: lockedSide }); }
+    socket.on('roomCreated', (data) => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerHTML = data.code; document.getElementById('room-wager-info').innerHTML = `Wager: ₹${data.wager} | Your Side: ${data.side.toUpperCase()}`; });
+    function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code }); } else { alert("4-Digit Code dalo!"); } }
+    
+    socket.on('pvpMatchStarted', (data) => { toggleModal('pvpModal', false); document.getElementById("status-terminal").innerHTML = data.message; document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; document.getElementById("bot-img").innerHTML = "😎"; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "COIN IN THE AIR... TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+    socket.on('matchmakingStarted', (data) => { document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; document.getElementById("bot-name").innerHTML = data.bot.name; document.getElementById("bot-img").innerHTML = data.bot.avatar; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+
+    socket.on('gameResult', (data) => {
+        const coin = document.getElementById("coin-object"); const term = document.getElementById("status-terminal");
+        if(data.tossResult === 'heads') { coin.className = "coin coin-stop-heads"; } else { coin.className = "coin coin-stop-tails"; }
+        setTimeout(() => {
+            if(data.status === 'won') { playSound('win'); spawnGoldRain(); term.className = "result-panel win"; term.innerHTML = `WIN! 🎉 Result: ${data.tossResult.toUpperCase()}`; } 
+            else { playSound('loss'); term.className = "result-panel loss"; term.innerHTML = `LOSS! 😢 Result: ${data.tossResult.toUpperCase()}`; }
+            currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00";
+            validateWager(); document.getElementById("toss-button").disabled = false;
+        }, 600);
+    });
+
+    socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; });
+
+    function validateWager() {
+        let inputField = document.getElementById("wager-input"); let typedVal = parseInt(inputField.value);
+        if (isNaN(typedVal) || typedVal < 50) { typedVal = 50; }
+        typedVal = Math.round(typedVal / 50) * 50;
+        if (typedVal > currentBalance) { typedVal = Math.floor(currentBalance / 50) * 50; }
+        if (typedVal === 0 && currentBalance >= 50) { typedVal = 50; }
+        selectedWager = typedVal; inputField.value = selectedWager;
+    }
+
+    function changeWager(val) {
+        playSound('click'); if(document.getElementById("toss-button").disabled) return;
+        let target = selectedWager + val;
+        if (target < 50) target = 50; if (target > currentBalance) { target = Math.floor(currentBalance / 50) * 50; }
+        selectedWager = target; document.getElementById("wager-input").value = selectedWager;
+    }
+
+    function selectSide(side) {
+        playSound('click'); if(document.getElementById("toss-button").disabled) return;
+        validateWager(); lockedSide = side;
+        document.getElementById("btn-heads").classList.remove('selected'); document.getElementById("btn-tails").classList.remove('selected');
+        document.getElementById("btn-" + side).classList.add('selected'); document.getElementById("status-terminal").innerHTML = `LOCKED ON: ${side.toUpperCase()}`;
+    }
+
+    function startRoyalGame() {
+        if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
+        validateWager(); 
+        if(!lockedSide) { alert("Please select HEADS or TAILS first!"); return; }
+        if(selectedWager < 50 || currentBalance < 50) { alert("Minimum ₹50 balance chahiye!"); return; }
+        document.getElementById("toss-button").disabled = true;
+        document.getElementById("status-terminal").innerHTML = "SEARCHING GLOBAL LOBBY...";
+        document.getElementById("bot-name").innerHTML = "Searching..."; document.getElementById("bot-img").innerHTML = "⌛";
+        socket.emit('placeBet', { side: lockedSide, amount: selectedWager });
+    }
+  </script>
+</body>
+</html>
