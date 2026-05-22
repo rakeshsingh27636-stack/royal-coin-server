@@ -2,23 +2,20 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const path = require('path'); // Path module joda file dikhane ke liye
+const path = require('path');
 
 const app = express();
 app.use(cors());
 
-// SERVER KO BATA DIYA KI INDEX.HTML SHOW KARE
+// YAHI WO LINE HAI JO ICON BHEJNE KI PERMISSION DETI HAI
+app.use(express.static(__dirname));
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
-});
+const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 
 let players = {};
 
@@ -56,29 +53,16 @@ io.on('connection', (socket) => {
 
     socket.on('placeBet', (data) => {
         if(!players[socket.id] || players[socket.id].balance < data.amount) {
-            socket.emit('error', { message: 'Insufficient balance' });
-            return;
+            socket.emit('error', { message: 'Insufficient balance' }); return;
         }
-        
         socket.emit('matchmakingStarted', { bot: { name: getRandomBot(), avatar: "🤖" } });
-        
         setTimeout(() => {
             const outcomes = ['heads', 'tails'];
             const tossResult = outcomes[Math.floor(Math.random() * outcomes.length)];
             let status = 'lost';
-            
-            if(tossResult === data.side) {
-                players[socket.id].balance += data.amount;
-                status = 'won';
-            } else {
-                players[socket.id].balance -= data.amount;
-            }
-            
-            socket.emit('gameResult', {
-                tossResult: tossResult,
-                status: status,
-                newBalance: players[socket.id].balance
-            });
+            if(tossResult === data.side) { players[socket.id].balance += data.amount; status = 'won'; } 
+            else { players[socket.id].balance -= data.amount; }
+            socket.emit('gameResult', { tossResult: tossResult, status: status, newBalance: players[socket.id].balance });
         }, 2500);
     });
 
@@ -90,8 +74,7 @@ io.on('connection', (socket) => {
                 const outcomes = ['heads', 'tails'];
                 const tossResult = outcomes[Math.floor(Math.random() * outcomes.length)];
                 let status = (tossResult === data.side) ? 'won' : 'lost';
-                if(status === 'won') players[socket.id].balance += data.amount;
-                else players[socket.id].balance -= data.amount;
+                if(status === 'won') players[socket.id].balance += data.amount; else players[socket.id].balance -= data.amount;
                 socket.emit('gameResult', { tossResult: tossResult, status: status, newBalance: players[socket.id].balance });
             }, 2500);
         }, 4000);
@@ -106,12 +89,8 @@ io.on('connection', (socket) => {
         }, 2500);
     });
 
-    socket.on('disconnect', () => {
-        delete players[socket.id];
-    });
+    socket.on('disconnect', () => { delete players[socket.id]; });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+server.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
