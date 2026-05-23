@@ -27,8 +27,7 @@
       background-image: radial-gradient(circle at 50% 40%, var(--burgundy-light) 0%, var(--burgundy-dark) 80%); 
       color: #fff; display: flex; justify-content: center; align-items: center; 
       min-height: 100vh; margin: 0; overflow: hidden; 
-      padding-top: env(safe-area-inset-top); 
-      padding-bottom: env(safe-area-inset-bottom);
+      padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
       box-sizing: border-box;
     }
     
@@ -99,7 +98,7 @@
     @keyframes marquee { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
     
     .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 100; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(8px); }
-    .modal-card { width: 100%; background: #250006; border: 2px solid var(--gold-royal); border-radius: 20px; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(255,215,0,0.3); }
+    .modal-card { width: 100%; background: #250006; border: 2px solid var(--gold-royal); border-radius: 20px; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(255,215,0,0.3); max-height: 90vh; overflow-y: auto;}
     .modal-card h2 { font-family: 'Orbitron', sans-serif; color: var(--gold-royal); margin: 0; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
     .modal-row { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
     .hub-btn { padding: 14px; border: 1px solid #fff; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
@@ -152,9 +151,9 @@
 
       <div class="modal-card" id="deposit-screen" style="display:none;">
         <h2>DEPOSIT FUNDS</h2>
-        <div class="modal-row">
-          <input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" value="500"/>
-          <button class="hub-btn deposit-btn" onclick="triggerPaymentGateway()">PAY VIA RAZORPAY / UPI</button>
+        <div class="modal-row" id="qr-dynamic-area">
+          <input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" value="100"/>
+          <button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI QR</button>
         </div>
         <div class="close-modal" onclick="backToFundsMain()">Back</div>
       </div>
@@ -163,10 +162,9 @@
         <h2>WITHDRAW WINNINGS</h2>
         <div class="modal-row">
           <input type="number" id="withdraw-amount" class="login-input" placeholder="Amount to Withdraw" value="100"/>
-          <input type="text" id="withdraw-upi" class="login-input" placeholder="Enter UPI ID (eg. 987@ybl)" />
+          <input type="text" id="withdraw-upi" class="login-input" placeholder="Enter UPI ID" />
           <button class="hub-btn withdraw-btn" onclick="submitWithdrawal()">SUBMIT WITHDRAWAL</button>
         </div>
-        <p style="color:#aaa; font-size:11px; margin-top:10px;">Note: Amount will be credited to your bank account within 24 hours.</p>
         <div class="close-modal" onclick="backToFundsMain()">Back</div>
       </div>
     </div>
@@ -185,7 +183,6 @@
       </div>
       <div class="modal-card" id="pvp-waiting" style="display:none;">
         <h2>ROOM CREATED</h2>
-        <p style="color:#bbb; font-size:12px;">Ask friend to enter this code:</p>
         <div class="room-code-display" id="my-room-code">----</div>
         <p style="color:#00f0ff; font-size:12px;" id="room-wager-info"></p>
         <div style="color:#ffd700; margin-top:10px; font-size: 14px;">⏳ Waiting for friend...</div>
@@ -260,13 +257,11 @@
     let currentBalance = 0; let selectedWager = 100; let lockedSide = null;
     let userName = ""; let userPhone = "";
 
-    // DYNAMIC LOGIN LOGIC (Local Storage)
     let savedName = localStorage.getItem('royalUserName');
     let savedPhone = localStorage.getItem('royalUserPhone');
 
     window.onload = () => {
         if(savedPhone) {
-            // User pehle aa chuka hai, Sirf number mangenge
             document.getElementById('user-name').style.display = 'none';
             document.getElementById('login-title').innerText = "WELCOME BACK";
             document.getElementById('login-subtitle').innerText = "Enter mobile number to login";
@@ -280,33 +275,25 @@
         let errorTxt = document.getElementById('login-error');
 
         if(savedPhone) {
-            // LOGIN MODE
             if(phoneInput === savedPhone) {
-                userName = savedName; 
-                userPhone = savedPhone;
-                finalizeLogin();
+                userName = savedName; userPhone = savedPhone; finalizeLogin();
             } else {
-                errorTxt.innerText = "Number not registered on this device!";
-                errorTxt.style.display = "block";
+                errorTxt.innerText = "Number not registered on this device!"; errorTxt.style.display = "block";
             }
         } else {
-            // REGISTER MODE
             if(nameInput.trim() === "" || phoneInput.trim() === "") { 
-                errorTxt.innerText = "Please fill both fields!";
-                errorTxt.style.display = "block";
-                return; 
+                errorTxt.innerText = "Please fill both fields!"; errorTxt.style.display = "block"; return; 
             }
             localStorage.setItem('royalUserName', nameInput);
             localStorage.setItem('royalUserPhone', phoneInput);
-            userName = nameInput; 
-            userPhone = phoneInput;
-            finalizeLogin();
+            userName = nameInput; userPhone = phoneInput; finalizeLogin();
         }
     }
 
     function finalizeLogin() {
         document.getElementById("player-display-name").innerHTML = userName;
         document.getElementById("login-screen").style.display = "none";
+        socket.emit('setUserData', { name: userName, phone: userPhone });
         if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
     }
 
@@ -324,7 +311,7 @@
         } catch(e) {}
     }
 
-    // GOLD RAIN LOGIC
+    // CONFETTI RAIN
     const canvas = document.getElementById("confetti-canvas"); const ctx = canvas.getContext("2d");
     let particles = [];
     function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
@@ -337,27 +324,62 @@
     function updateGoldRain() {
         ctx.clearRect(0, 0, canvas.width, canvas.height); let active = false;
         particles.forEach(p => {
-            p.y += p.speedY; p.tilt += p.tiltSpeed; ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, Math.abs(Math.sin(p.tilt))); ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 2 * Math.PI); let grad = ctx.createLinearGradient(-p.r, -p.r, p.r, p.r); grad.addColorStop(0, "#fffde7"); grad.addColorStop(0.3, "#ffd700"); grad.addColorStop(1, "#b8860b"); ctx.fillStyle = grad; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = "#8a6300"; ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, p.r * 0.7, 0, 2 * Math.PI); ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.stroke(); ctx.restore(); if(p.y < canvas.height + 50) active = true;
+            p.y += p.speedY; p.tilt += p.tiltSpeed; ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, Math.abs(Math.sin(p.tilt))); ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 2 * Math.PI); let grad = ctx.createLinearGradient(-p.r, -p.r, p.r, p.r); grad.addColorStop(0, "#fffde7"); grad.addColorStop(0.3, "#ffd700"); grad.addColorStop(1, "#b8860b"); ctx.fillStyle = grad; ctx.fill(); ctx.restore(); if(p.y < canvas.height + 50) active = true;
         });
         if(active) requestAnimationFrame(updateGoldRain);
     }
 
-    // FUNDS LOGIC
+    // MANUAL DEPOSIT & VERIFICATION UX FLOW
     function toggleModal(id, show) { playSound('click'); document.getElementById(id).style.display = show ? "flex" : "none"; }
-    function backToFundsMain() { document.getElementById("funds-main").style.display = "block"; document.getElementById("deposit-screen").style.display = "none"; document.getElementById("withdraw-screen").style.display = "none"; }
+    function backToFundsMain() { 
+        document.getElementById("funds-main").style.display = "block"; 
+        document.getElementById("deposit-screen").style.display = "none"; 
+        document.getElementById("withdraw-screen").style.display = "none";
+        document.getElementById("qr-dynamic-area").innerHTML = `
+            <input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" value="100"/>
+            <button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI QR</button>
+        `;
+    }
     function openDeposit() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("deposit-screen").style.display = "block"; }
     function openWithdraw() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("withdraw-screen").style.display = "block"; }
 
-    function triggerPaymentGateway() {
+    function showManualQRCode() {
         let amount = parseInt(document.getElementById("deposit-amount").value);
-        if(isNaN(amount) || amount <= 0) return alert("Enter valid amount");
+        if(isNaN(amount) || amount < 50) return alert("Minimum deposit amount is ₹50!");
         playSound('click');
-        setTimeout(() => {
-            alert(`✅ PAYMENT SUCCESSFUL!\n₹${amount} added to wallet.`);
-            socket.emit('depositFunds', { amount: amount });
-            toggleModal('fundsModal', false); backToFundsMain();
-        }, 800); 
+        
+        document.getElementById("qr-dynamic-area").innerHTML = `
+            <p style="color:#ffd700; margin:0;">SCAN QR & PAY EXACTLY: ₹${amount}</p>
+            <img src="qr.jpg" alt="UPI QR" style="width:180px; height:180px; border:3px solid var(--gold-royal); margin:5px auto; border-radius:10px;">
+            <p style="color:#aaa; font-size:11px; margin:0;">After paying, enter your 12-Digit UTR/Reference No. below:</p>
+            <input type="number" id="utr-number-input" class="login-input" placeholder="Enter 12-Digit UTR Number" />
+            <button class="hub-btn deposit-btn" onclick="submitUTR(${amount})">SUBMIT DEPOSIT REQUEST</button>
+        `;
     }
+
+    function submitUTR(amount) {
+        let utr = document.getElementById("utr-number-input").value;
+        if(utr.trim().length !== 12) return alert("Error: UTR number exactly 12 digits ka hona chahiye!");
+        
+        playSound('click');
+        socket.emit('submitManualDeposit', { amount: amount, utr: utr });
+        
+        document.getElementById("qr-dynamic-area").innerHTML = `
+            <div style="font-size:40px; margin-top:10px;">⏳</div>
+            <h3 style="color:#ffd700; margin:5px 0;">VERIFICATION PENDING</h3>
+            <p style="color:#bbb; font-size:12px;">Admin aapke UTR (${utr}) ko verify kar raha hai. Kripya 2-5 minute wait karein...</p>
+        `;
+    }
+
+    socket.on('depositResult', (data) => {
+        if(data.status === 'success') {
+            alert(`🎉 EXCELLENT! Admin ne aapka payment verify kar diya hai. ₹${data.amount} aapke wallet me jod diye gaye hain.`);
+            spawnGoldRain();
+        } else {
+            alert("❌ PAYMENT REJECTED! Admin ne aapka request cancel kar diya hai. Kripya sahi UTR ke sath dobara try karein.");
+        }
+        toggleModal('fundsModal', false); backToFundsMain();
+    });
 
     function submitWithdrawal() {
         let amount = parseInt(document.getElementById("withdraw-amount").value);
@@ -376,15 +398,14 @@
         let inputField = document.getElementById("wager-input"); let typedVal = parseInt(inputField.value);
         if (isNaN(typedVal) || typedVal < 50) { typedVal = 50; }
         typedVal = Math.round(typedVal / 50) * 50;
-        if (typedVal > currentBalance) { typedVal = Math.floor(currentBalance / 50) * 50; }
-        if (typedVal === 0 && currentBalance >= 50) { typedVal = 50; }
+        if (typedVal > currentBalance) { typedVal = Math.floor(currentBalance / 50) * 50; if(typedVal === 0) typedVal = 50; }
         selectedWager = typedVal; inputField.value = selectedWager;
     }
 
     function changeWager(val) {
         playSound('click'); if(document.getElementById("toss-button").disabled) return;
         let target = selectedWager + val;
-        if (target < 50) target = 50; if (target > currentBalance) { target = Math.floor(currentBalance / 50) * 50; }
+        if (target < 50) target = 50;
         selectedWager = target; document.getElementById("wager-input").value = selectedWager;
     }
 
@@ -397,13 +418,13 @@
 
     // GAMEPLAY LOGIC
     socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
-    socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); });
+    socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; });
     
     function startRoyalGame() {
         if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
         validateWager(); 
         if(!lockedSide) { alert("Please select HEADS or TAILS first!"); return; }
-        if(selectedWager < 50 || currentBalance < 50) { alert("Minimum ₹50 balance chahiye!"); return; }
+        if(selectedWager > currentBalance) { alert("Insufficient Balance! Kripya pahle FUNDS section se Deposit karein."); return; }
         document.getElementById("toss-button").disabled = true;
         document.getElementById("status-terminal").innerHTML = "SEARCHING GLOBAL LOBBY...";
         document.getElementById("bot-name").innerHTML = "Searching..."; document.getElementById("bot-img").innerHTML = "⌛";
@@ -419,19 +440,18 @@
             if(data.status === 'won') { playSound('win'); spawnGoldRain(); term.className = "result-panel win"; term.innerHTML = `WIN! 🎉 Result: ${data.tossResult.toUpperCase()}`; } 
             else { playSound('loss'); term.className = "result-panel loss"; term.innerHTML = `LOSS! 😢 Result: ${data.tossResult.toUpperCase()}`; }
             currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00";
-            validateWager(); document.getElementById("toss-button").disabled = false;
+            document.getElementById("toss-button").disabled = false;
         }, 600);
     });
 
     socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; });
 
     // PVP LOGIC
-    function openPvPMenu() { validateWager(); if(!lockedSide) { alert("Pehle HEADS ya TAILS select kijiye!"); return; } document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
-    function createRoom() { if(selectedWager > currentBalance) { alert("Balance kam hai!"); return; } socket.emit('createRoom', { amount: selectedWager, side: lockedSide }); }
+    function openPvPMenu() { validateWager(); if(!lockedSide) { alert("Pehle HEADS ya TAILS select kijiye!"); return; } if(selectedWager > currentBalance) { alert("Balance kam hai!"); return; } document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
+    function createRoom() { socket.emit('createRoom', { amount: selectedWager, side: lockedSide }); }
     socket.on('roomCreated', (data) => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerHTML = data.code; document.getElementById('room-wager-info').innerHTML = `Wager: ₹${data.wager} | Your Side: ${data.side.toUpperCase()}`; });
     function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code }); } else { alert("4-Digit Code dalo!"); } }
     socket.on('pvpMatchStarted', (data) => { toggleModal('pvpModal', false); document.getElementById("status-terminal").innerHTML = data.message; document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; document.getElementById("bot-img").innerHTML = "😎"; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "COIN IN THE AIR... TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
-
   </script>
 </body>
 </html>
