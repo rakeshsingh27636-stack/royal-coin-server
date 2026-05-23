@@ -230,11 +230,13 @@
 
     function bufferEncode(value) { return btoa(String.fromCharCode.apply(null, new Uint8Array(value))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
     function bufferDecode(value) { return Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)); }
+    
+    // FETCH LOCAL STORAGE 
     let savedName = localStorage.getItem('royalUserName');
     let savedPhone = localStorage.getItem('royalUserPhone');
     let savedBioCred = localStorage.getItem('royalBioCred');
 
-    // SILENT RECONNECT
+    // EXTREME AUTO RECONNECT (Even if minimized)
     socket.on('connect', () => {
         if(savedName && savedPhone) {
             userName = savedName; userPhone = savedPhone;
@@ -280,7 +282,7 @@
                 const publicKey = { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ id: bufferDecode(savedBioCred), type: 'public-key' }], userVerification: 'required', timeout: 60000 };
                 await navigator.credentials.get({ publicKey });
                 userName = savedName; userPhone = savedPhone; finalizeLogin();
-            } catch(e) { btn.innerText = "🔓 UNLOCK APP"; errorTxt.innerText = "Authentication Failed!"; errorTxt.style.display = "block"; }
+            } catch(e) { btn.innerText = "🔓 UNLOCK APP"; errorTxt.innerText = "Authentication Cancelled!"; errorTxt.style.display = "block"; }
         } else {
             if(nameInput.trim() === "" || phoneInput.trim() === "") { errorTxt.innerText = "Please fill both fields!"; errorTxt.style.display = "block"; return; }
             if(!window.PublicKeyCredential) { localStorage.setItem('royalUserName', nameInput); localStorage.setItem('royalUserPhone', phoneInput); userName = nameInput; userPhone = phoneInput; finalizeLogin(); return; }
@@ -290,7 +292,7 @@
                 const cred = await navigator.credentials.create({ publicKey });
                 localStorage.setItem('royalBioCred', bufferEncode(cred.rawId)); localStorage.setItem('royalUserName', nameInput); localStorage.setItem('royalUserPhone', phoneInput);
                 userName = nameInput; userPhone = phoneInput; finalizeLogin();
-            } catch (e) { btn.innerText = "CREATE ID & SECURE LOCK"; errorTxt.innerText = "Error setting screen lock!"; errorTxt.style.display = "block"; }
+            } catch (e) { btn.innerText = "CREATE ID & SECURE LOCK"; errorTxt.innerText = "Error: Setup Screen Lock first!"; errorTxt.style.display = "block"; }
         }
     }
 
@@ -323,11 +325,16 @@
     function openDeposit() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("deposit-screen").style.display = "block"; }
     function openWithdraw() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("withdraw-screen").style.display = "block"; }
 
-    // COUPON & FUNDS EMITS (Includes Phone Number for Bulletproof Connection)
+    // HYBRID FAIL-SAFE ACTION CALLS
     function submitCoupon() {
         let code = document.getElementById("coupon-code-input").value.trim().toUpperCase();
         if(code === "") return alert("Please enter coupon code!");
-        playSound('click'); socket.emit('redeemCoupon', { code: code, phone: userPhone, name: userName });
+        playSound('click'); 
+        
+        // Grab local storage directly to ensure it never fails
+        let currentPhone = userPhone || localStorage.getItem('royalUserPhone');
+        let currentName = userName || localStorage.getItem('royalUserName');
+        socket.emit('redeemCoupon', { code: code, phone: currentPhone, name: currentName });
     }
     socket.on('couponResult', (data) => {
         if(data.status === 'success') { spawnGoldRain(); document.getElementById("coupon-code-input").value = ""; toggleModal('fundsModal', false); }
@@ -336,12 +343,11 @@
 
     function validateDeposit() { let inputField = document.getElementById("deposit-amount"); let val = parseInt(inputField.value); if (isNaN(val) || val < 100) val = 100; val = Math.round(val / 50) * 50; inputField.value = val; }
     function showManualQRCode() { let amount = parseInt(document.getElementById("deposit-amount").value); validateDeposit(); document.getElementById("qr-dynamic-area").innerHTML = `<p style="color:#ffd700; margin:0;">SCAN QR & PAY EXACTLY: ₹${amount}</p><img src="qr.jpg" alt="UPI QR" style="width:180px; height:180px; border:3px solid var(--gold-royal); margin:5px auto; border-radius:10px;"><input type="number" id="utr-number-input" class="login-input" placeholder="Enter 12-Digit UTR Number" /><button class="hub-btn deposit-btn" onclick="submitUTR(${amount})">SUBMIT DEPOSIT REQUEST</button>`; }
-    function submitUTR(amount) { let utr = document.getElementById("utr-number-input").value; if(utr.trim().length !== 12) return alert("UTR must be 12 digits!"); socket.emit('submitManualDeposit', { amount: amount, utr: utr, phone: userPhone }); document.getElementById("qr-dynamic-area").innerHTML = `<h3 style="color:#ffd700;">VERIFICATION PENDING</h3>`; }
+    function submitUTR(amount) { let utr = document.getElementById("utr-number-input").value; if(utr.trim().length !== 12) return alert("UTR must be 12 digits!"); socket.emit('submitManualDeposit', { amount: amount, utr: utr, phone: userPhone || localStorage.getItem('royalUserPhone') }); document.getElementById("qr-dynamic-area").innerHTML = `<h3 style="color:#ffd700;">VERIFICATION PENDING</h3>`; }
     socket.on('depositResult', (data) => { if(data.status === 'success') { alert(`🎉 EXCELLENT! ₹${data.amount} added.`); spawnGoldRain(); } else { alert("❌ PAYMENT REJECTED!"); } toggleModal('fundsModal', false); backToFundsMain(); });
     
-    function submitWithdrawal() { let amount = parseInt(document.getElementById("withdraw-amount").value); let upiId = document.getElementById("withdraw-upi").value; if (amount < 1000) return alert("Minimum withdrawal is ₹1000!"); if(upiId.trim() === "" || amount > currentBalance) return alert("Invalid details or balance!"); socket.emit('withdrawFunds', { amount: amount, upi: upiId, phone: userPhone }); alert("Withdrawal requested!"); toggleModal('fundsModal', false); backToFundsMain(); }
+    function submitWithdrawal() { let amount = parseInt(document.getElementById("withdraw-amount").value); let upiId = document.getElementById("withdraw-upi").value; if (amount < 1000) return alert("Minimum withdrawal is ₹1000!"); if(upiId.trim() === "" || amount > currentBalance) return alert("Invalid details or balance!"); socket.emit('withdrawFunds', { amount: amount, upi: upiId, phone: userPhone || localStorage.getItem('royalUserPhone') }); alert("Withdrawal requested!"); toggleModal('fundsModal', false); backToFundsMain(); }
 
-    // WAGER LOGIC
     function validateWager() {
         let inputField = document.getElementById("wager-input"); let typedVal = parseInt(inputField.value);
         if (isNaN(typedVal) || typedVal < 100) typedVal = 100;
@@ -356,7 +362,10 @@
         validateWager(); if(!lockedSide) return alert("Select side first!"); if(selectedWager > currentBalance) return alert("Insufficient balance!");
         playSound('click'); document.getElementById("toss-button").disabled = true; updateGuidance();
         document.getElementById("status-terminal").innerHTML = "SEARCHING GLOBAL LOBBY..."; document.getElementById("bot-name").innerHTML = "Searching..."; document.getElementById("bot-img").innerHTML = "⌛";
-        socket.emit('placeBet', { side: lockedSide, amount: selectedWager, phone: userPhone });
+        
+        let pPhone = userPhone || localStorage.getItem('royalUserPhone');
+        let pName = userName || localStorage.getItem('royalUserName');
+        socket.emit('placeBet', { side: lockedSide, amount: selectedWager, phone: pPhone, name: pName });
     }
     
     socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); updateGuidance(); });
@@ -384,9 +393,9 @@
 
     // PVP & REMATCH ENGINE
     function openPvPMenu() { validateWager(); if(!lockedSide) return alert("Pehle HEADS ya TAILS select kijiye!"); if(selectedWager > currentBalance) return alert("Balance kam hai!"); document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
-    function createRoom() { socket.emit('createRoom', { amount: selectedWager, side: lockedSide, phone: userPhone }); }
+    function createRoom() { socket.emit('createRoom', { amount: selectedWager, side: lockedSide, phone: userPhone || localStorage.getItem('royalUserPhone') }); }
     socket.on('roomCreated', (data) => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerHTML = data.code; document.getElementById('room-wager-info').innerHTML = `Wager: ₹${data.wager} | Side: ${data.side.toUpperCase()}`; });
-    function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code, phone: userPhone }); } else { alert("Enter 4-Digit Code!"); } }
+    function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code, phone: userPhone || localStorage.getItem('royalUserPhone') }); } else { alert("Enter 4-Digit Code!"); } }
 
     function clickPvpPlayAgain() {
         if(currentBalance < 100) { alert("Insufficient Funds! Add money first."); toggleModal('pvpModal', false); toggleModal('fundsModal', true); return; }
