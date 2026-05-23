@@ -236,6 +236,14 @@
     let savedPhone = localStorage.getItem('royalUserPhone');
     let savedBioCred = localStorage.getItem('royalBioCred');
 
+    // SILENT AUTO-RECONNECT FIX (Ye Code Server Sleep hone par Account wapas jodta hai)
+    socket.on('connect', () => {
+        if(savedName && savedPhone) {
+            userName = savedName; userPhone = savedPhone;
+            socket.emit('setUserData', { name: userName, phone: userPhone });
+        }
+    });
+
     // GLITTER GUIDANCE
     function updateGuidance() {
         document.getElementById("funds-btn").classList.remove("glitter-active");
@@ -293,7 +301,7 @@
     function finalizeLogin() {
         document.getElementById("player-display-name").innerHTML = userName;
         document.getElementById("login-screen").style.display = "none";
-        socket.emit('setUserData', { name: userName, phone: userPhone }); // Sends to backend for DB lookup
+        socket.emit('setUserData', { name: userName, phone: userPhone });
         if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
         updateGuidance();
     }
@@ -328,8 +336,12 @@
         playSound('click'); socket.emit('redeemCoupon', { code: code });
     }
     socket.on('couponResult', (data) => {
+        if(data.status === 'success') { 
+            spawnGoldRain(); 
+            document.getElementById("coupon-code-input").value = ""; 
+            toggleModal('fundsModal', false); 
+        }
         alert(data.message);
-        if(data.status === 'success') { spawnGoldRain(); document.getElementById("coupon-code-input").value = ""; toggleModal('fundsModal', false); }
     });
 
     // DEPOSIT/WITHDRAW LOGIC

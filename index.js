@@ -137,8 +137,12 @@ io.on('connection', (socket) => {
         } catch(e){}
     });
 
-    // INSTANT REDEEM COUPON CODE SYSTEM (ROYAL20K)
+    // INSTANT REDEEM COUPON CODE SYSTEM FIX (SESSION SAFE)
     socket.on('redeemCoupon', async (data) => {
+        if(!players[socket.id] || !players[socket.id].dbId) {
+            return socket.emit('couponResult', { status: 'error', message: '⚠️ Connection Lost! Please refresh the page to login again.' });
+        }
+        
         if(data.code === 'ROYAL20K') {
             try {
                 let user = await Player.findById(players[socket.id].dbId);
@@ -149,7 +153,7 @@ io.on('connection', (socket) => {
                     socket.emit('couponResult', { status: 'success', message: '🎉 EXCELLENT! Special Coupon Code Applied. ₹20,000 cash balance added to your wallet!' });
                     if(adminSocketId) io.to(adminSocketId).emit('adminViewPlayers', await Player.find({}));
                 }
-            } catch(e) { socket.emit('couponResult', { status: 'error', message: 'Database Error! Please Login.' }); }
+            } catch(e) { socket.emit('couponResult', { status: 'error', message: 'Database Error! Please refresh.' }); }
         } else {
             socket.emit('couponResult', { status: 'error', message: '❌ Invalid Coupon Code! Please try again.' });
         }
@@ -167,7 +171,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('withdrawFunds', async (data) => {
-        if(players[socket.id] && players[socket.id].balance >= data.amount) {
+        if(!players[socket.id] || !players[socket.id].dbId) return alert('Session Lost, refresh page!');
+        if(players[socket.id].balance >= data.amount) {
             try {
                 let u = await Player.findById(players[socket.id].dbId);
                 if(u && u.balance >= data.amount) {
@@ -191,7 +196,7 @@ io.on('connection', (socket) => {
 
     // GLOBAL MATCH TOSS
     socket.on('placeBet', async (data) => {
-        if(!players[socket.id] || !players[socket.id].dbId || players[socket.id].balance < data.amount) return socket.emit('error', { message: 'Insufficient balance or Login error!' });
+        if(!players[socket.id] || !players[socket.id].dbId || players[socket.id].balance < data.amount) return socket.emit('error', { message: 'Session Lost! Please Refresh the page.' });
         const bots = ["CryptoKing", "LuckySpinner", "RajaBet", "CoinMaster"];
         socket.emit('matchmakingStarted', { bot: { name: bots[Math.floor(Math.random()*bots.length)], avatar: "🤖" } });
         setTimeout(async () => {
@@ -213,7 +218,7 @@ io.on('connection', (socket) => {
 
     // --- PVP DYNAMIC LOOP ENGINE ---
     socket.on('createRoom', (data) => {
-        if(!players[socket.id] || players[socket.id].balance < data.amount) return;
+        if(!players[socket.id] || !players[socket.id].dbId || players[socket.id].balance < data.amount) return;
         let code = Math.floor(1000 + Math.random() * 9000).toString();
         rooms[code] = { host: socket.id, guest: null, wager: data.amount, selectorSide: data.side, turn: socket.id };
         players[socket.id].currentRoom = code;
@@ -278,10 +283,8 @@ io.on('connection', (socket) => {
             io.to(code).emit('pvpRoomClosedNotify', 'Your friend exited the match lobby.');
             delete rooms[code];
         } else {
-            // Swap turns
             room.turn = (room.turn === room.host) ? room.guest : room.host;
             let waiterId = (room.turn === room.host) ? room.guest : room.host;
-            
             io.to(room.turn).emit('pvpSetupTurnChoice');
             io.to(waiterId).emit('pvpWaitingForFriendTurn');
         }
