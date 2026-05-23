@@ -89,8 +89,8 @@ app.get('/admin-secret-panel', (req, res) => {
                 const socket = io();
                 function verifyPassword() { if(document.getElementById('admin-pass').value === 'Royal@123') { document.getElementById('login-screen').style.display='none'; document.getElementById('dashboard-screen').style.display='block'; socket.emit('registerAdmin'); } else { document.getElementById('login-err').style.display = 'block'; } }
                 function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); }
-                socket.on('adminViewRequests', (reqs) => { const c = document.getElementById('deposits-container'); c.innerHTML=''; if(Object.keys(reqs).length === 0) c.innerHTML = '<p style="color:#aaa;">No pending deposits.</p>'; for(let id in reqs) { c.innerHTML += \`<div class="req-card"><p><strong>Player:</strong> \${reqs[id].name}</p><p><strong>Amount:</strong> ₹\${reqs[id].amount} | UTR: <span style="color:#ffd700;">\${reqs[id].utr}</span></p><div style="margin-top:15px;"><button class="action app-btn" onclick="socket.emit('adminDepAction',{requestId:'\${id}',action:'approve'})">APPROVE</button><button class="action rej-btn" onclick="socket.emit('adminDepAction',{requestId:'\${id}',action:'reject'})">REJECT</button></div></div>\`; } });
-                socket.on('adminViewWithdrawals', (wits) => { const c = document.getElementById('withdrawals-container'); c.innerHTML=''; if(Object.keys(wits).length === 0) c.innerHTML = '<p style="color:#aaa;">No pending withdrawals.</p>'; for(let id in wits) { c.innerHTML += \`<div class="req-card" style="border-color:#ff3366;"><p><strong>Player:</strong> \${wits[id].name}</p><p><strong>Amount:</strong> <span style="color:#00ff99;">₹\${wits[id].amount}</span> | UPI: <span style="color:#ffd700;">\${wits[id].upi}</span></p><div style="margin-top:15px;"><button class="action app-btn" onclick="socket.emit('adminWithAction',{requestId:'\${id}',action:'approve'})">PAID</button><button class="action rej-btn" onclick="socket.emit('adminWithAction',{requestId:'\${id}',action:'reject'})">REFUND</button></div></div>\`; } });
+                socket.on('adminViewRequests', (reqs) => { const c = document.getElementById('deposits-container'); c.innerHTML=''; if(Object.keys(reqs).length === 0) c.innerHTML = '<p style="color:#aaa;">No pending deposits.</p>'; for(let id in reqs) { c.innerHTML += \`<div class="req-card"><p><strong>Player:</strong> \${reqs[id].name} (\${reqs[id].phone})</p><p><strong>Amount:</strong> ₹\${reqs[id].amount} | UTR: <span style="color:#ffd700;">\${reqs[id].utr}</span></p><div style="margin-top:15px;"><button class="action app-btn" onclick="socket.emit('adminDepAction',{requestId:'\${id}',action:'approve'})">APPROVE</button><button class="action rej-btn" onclick="socket.emit('adminDepAction',{requestId:'\${id}',action:'reject'})">REJECT</button></div></div>\`; } });
+                socket.on('adminViewWithdrawals', (wits) => { const c = document.getElementById('withdrawals-container'); c.innerHTML=''; if(Object.keys(wits).length === 0) c.innerHTML = '<p style="color:#aaa;">No pending withdrawals.</p>'; for(let id in wits) { c.innerHTML += \`<div class="req-card" style="border-color:#ff3366;"><p><strong>Player:</strong> \${wits[id].name} (\${wits[id].phone})</p><p><strong>Amount:</strong> <span style="color:#00ff99;">₹\${wits[id].amount}</span> | UPI: <span style="color:#ffd700;">\${wits[id].upi}</span></p><div style="margin-top:15px;"><button class="action app-btn" onclick="socket.emit('adminWithAction',{requestId:'\${id}',action:'approve'})">PAID</button><button class="action rej-btn" onclick="socket.emit('adminWithAction',{requestId:'\${id}',action:'reject'})">REFUND</button></div></div>\`; } });
                 socket.on('adminViewPlayers', (list) => { const t = document.getElementById('players-table'); t.innerHTML=''; list.forEach(p=>{ let lostAmount = p.totalLost || 0; t.innerHTML+=\`<tr><td>\${p.name}</td><td>\${p.phone}</td><td style="color:#ffd700; font-weight:bold;">₹\${p.balance}</td><td>\${p.matchesPlayed}</td><td style="color:#00ff99; font-weight:bold;">₹\${p.totalWon}</td><td style="color:#ff3366; font-weight:bold;">₹\${lostAmount}</td></tr>\`; }); });
             </script>
         </body>
@@ -112,23 +112,16 @@ setInterval(() => {
     io.emit('liveTickerUpdate', { text: `🔥 ${bots[Math.floor(Math.random()*bots.length)]} won ₹${Math.floor(Math.random()*4500)+500}!` });
 }, 3500);
 
-// SAFE DATABASE SYNC FUNCTION (Background processing so app never blocks)
-function updateDBAsync(phone, name, balanceChange = 0, matchAdd = 0, wonAdd = 0, lostAdd = 0) {
-    if(!phone) return;
-    Player.findOne({ phone: phone }).then(user => {
-        if(!user) user = new Player({ name: name || "Player", phone: phone, balance: 0, totalLost: 0 });
-        user.balance += balanceChange;
-        user.matchesPlayed += matchAdd;
-        user.totalWon += wonAdd;
-        user.totalLost += lostAdd;
-        user.save().then(() => {
-            if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
-        }).catch(e => console.log("DB save issue ignored"));
-    }).catch(e => console.log("DB lookup issue ignored"));
+// SAFE DATABASE SYNC FUNCTION (Always forces finding user by phone)
+async function getAndUpdateUser(phone, name) {
+    if(!phone) return null;
+    let u = await Player.findOne({ phone: phone });
+    if(!u) { u = new Player({ name: name || "Player", phone: phone, balance: 0, totalLost: 0 }); await u.save(); }
+    return u;
 }
 
 io.on('connection', (socket) => {
-    players[socket.id] = { name: "Guest", phone: "", balance: 0, currentRoom: null };
+    players[socket.id] = { currentRoom: null };
     
     socket.on('registerAdmin', async () => {
         adminSocketId = socket.id;
@@ -137,56 +130,53 @@ io.on('connection', (socket) => {
         Player.find({}).then(all => socket.emit('adminViewPlayers', all)).catch(e=>{});
     });
 
-    socket.on('setUserData', (data) => {
-        if(players[socket.id]) { players[socket.id].name = data.name; players[socket.id].phone = data.phone; }
-        Player.findOne({ phone: data.phone }).then(user => {
-            if(user) {
-                if(players[socket.id]) players[socket.id].balance = user.balance;
-                socket.emit('updateBalance', { newBalance: user.balance });
-            } else {
-                let u = new Player({ name: data.name, phone: data.phone, balance: 0 });
-                u.save().catch(e=>{}); socket.emit('updateBalance', { newBalance: 0 });
-            }
+    socket.on('setUserData', async (data) => {
+        let user = await getAndUpdateUser(data.phone, data.name);
+        if(user) {
+            socket.emit('updateBalance', { newBalance: user.balance });
             if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
-        }).catch(e => { socket.emit('updateBalance', { newBalance: players[socket.id] ? players[socket.id].balance : 0 }); });
+        }
     });
 
-    // BULLETPROOF COUPON - Update RAM Instantly, then DB Async
-    socket.on('redeemCoupon', (data) => {
+    // STRICT COUPON REDEEM (Saved directly to DB)
+    socket.on('redeemCoupon', async (data) => {
+        if(!data.phone) return socket.emit('couponResult', { status: 'error', message: '❌ Invalid Session! Please refresh the page.' });
         if(data.code === 'ROYAL20K') {
-            if(players[socket.id]) {
-                players[socket.id].balance += 20000;
-                players[socket.id].name = data.name || players[socket.id].name;
-                players[socket.id].phone = data.phone || players[socket.id].phone;
-                
-                socket.emit('updateBalance', { newBalance: players[socket.id].balance });
+            let user = await getAndUpdateUser(data.phone, data.name);
+            if(user) {
+                user.balance += 20000; 
+                await user.save();
+                socket.emit('updateBalance', { newBalance: user.balance });
                 socket.emit('couponResult', { status: 'success', message: '🎉 EXCELLENT! Special Coupon Code Applied. ₹20,000 cash balance added to your wallet!' });
-                
-                // Sync to DB quietly without blocking UI
-                updateDBAsync(players[socket.id].phone, players[socket.id].name, 20000);
+                if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
+            } else {
+                socket.emit('couponResult', { status: 'error', message: 'Database Error! Please refresh.' });
             }
         } else {
             socket.emit('couponResult', { status: 'error', message: '❌ Invalid Coupon Code! Please try again.' });
         }
     });
 
-    socket.on('submitManualDeposit', (data) => { 
-        let p = players[socket.id];
-        if(p) { 
-            pendingDeposits[socket.id] = { name: p.name || data.name, phone: p.phone || data.phone, amount: data.amount, utr: data.utr }; 
+    socket.on('submitManualDeposit', async (data) => { 
+        if(!data.phone) return;
+        let u = await getAndUpdateUser(data.phone, "Player");
+        if(u) {
+            pendingDeposits[socket.id] = { name: u.name, phone: u.phone, amount: data.amount, utr: data.utr, dbId: u._id }; 
             if(adminSocketId) io.to(adminSocketId).emit('adminViewRequests', pendingDeposits); 
-        } 
+        }
     });
     
-    socket.on('adminDepAction', (data) => {
+    socket.on('adminDepAction', async (data) => {
         if(socket.id !== adminSocketId) return;
         const dep = pendingDeposits[data.requestId];
         if(dep && data.action === 'approve') {
-            if(players[data.requestId]) {
-                players[data.requestId].balance += parseInt(dep.amount);
-                io.to(data.requestId).emit('updateBalance', { newBalance: players[data.requestId].balance });
+            let u = await Player.findById(dep.dbId);
+            if(u) {
+                u.balance += parseInt(dep.amount);
+                await u.save();
+                io.to(data.requestId).emit('updateBalance', { newBalance: u.balance });
                 io.to(data.requestId).emit('depositResult', { status: 'success', amount: dep.amount });
-                updateDBAsync(players[data.requestId].phone, players[data.requestId].name, parseInt(dep.amount));
+                if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
             }
         } else if (dep) { 
             io.to(data.requestId).emit('depositResult', { status: 'failed' }); 
@@ -194,108 +184,137 @@ io.on('connection', (socket) => {
         delete pendingDeposits[data.requestId]; socket.emit('adminViewRequests', pendingDeposits);
     });
 
-    socket.on('withdrawFunds', (data) => {
-        let p = players[socket.id];
-        if(p && p.balance >= data.amount) {
-            p.balance -= data.amount;
-            socket.emit('updateBalance', { newBalance: p.balance });
-            pendingWithdrawals[socket.id] = { name: p.name || data.name, phone: p.phone || data.phone, amount: data.amount, upi: data.upi };
+    socket.on('withdrawFunds', async (data) => {
+        if(!data.phone) return;
+        let u = await getAndUpdateUser(data.phone, "Player");
+        if(u && u.balance >= data.amount) {
+            u.balance -= data.amount;
+            await u.save();
+            socket.emit('updateBalance', { newBalance: u.balance });
+            pendingWithdrawals[socket.id] = { name: u.name, phone: u.phone, amount: data.amount, upi: data.upi, dbId: u._id };
             if(adminSocketId) io.to(adminSocketId).emit('adminViewWithdrawals', pendingWithdrawals);
-            updateDBAsync(p.phone, p.name, -data.amount);
         }
     });
     
-    socket.on('adminWithAction', (data) => {
+    socket.on('adminWithAction', async (data) => {
         if(socket.id !== adminSocketId) return;
         const wit = pendingWithdrawals[data.requestId];
         if(wit && data.action === 'reject') {
-            if(players[data.requestId]) {
-                players[data.requestId].balance += parseInt(wit.amount);
-                io.to(data.requestId).emit('updateBalance', { newBalance: players[data.requestId].balance });
-                updateDBAsync(players[data.requestId].phone, players[data.requestId].name, parseInt(wit.amount));
+            let u = await Player.findById(wit.dbId);
+            if(u) {
+                u.balance += parseInt(wit.amount);
+                await u.save();
+                io.to(data.requestId).emit('updateBalance', { newBalance: u.balance });
             }
         }
         delete pendingWithdrawals[data.requestId]; socket.emit('adminViewWithdrawals', pendingWithdrawals);
+        if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
     });
 
-    // RAM-FIRST GLOBAL MATCH TOSS (Lag-free)
-    socket.on('placeBet', (data) => {
-        if(!players[socket.id] || players[socket.id].balance < data.amount) {
+    // STRICT DATABASE GLOBAL MATCH
+    socket.on('placeBet', async (data) => {
+        if(!data.phone) return socket.emit('error', { message: 'Session Error! Refresh page.' });
+        let u = await getAndUpdateUser(data.phone, data.name);
+        
+        if(!u || u.balance < data.amount) {
             return socket.emit('error', { message: 'Insufficient balance!' });
         }
         
-        // Instantly block spam clicking
-        players[socket.id].balance -= data.amount; 
-        if(data.phone) players[socket.id].phone = data.phone;
-        if(data.name) players[socket.id].name = data.name;
+        // Deduct upfront to stop spam
+        u.balance -= data.amount;
+        await u.save();
 
         const bots = ["CryptoKing", "LuckySpinner", "RajaBet", "CoinMaster"];
         socket.emit('matchmakingStarted', { bot: { name: bots[Math.floor(Math.random()*bots.length)], avatar: "🤖" } });
         
-        setTimeout(() => {
+        setTimeout(async () => {
+            // Fetch fresh state to prevent overwrites
+            let freshU = await Player.findById(u._id);
+            if(!freshU) return;
+
             const sideRes = Math.random() < 0.5 ? 'heads' : 'tails';
             let status = 'lost';
-            let wonAdd = 0, lostAdd = data.amount, balanceChange = -data.amount;
-
+            
+            freshU.matchesPlayed += 1;
             if(sideRes === data.side) { 
-                players[socket.id].balance += (data.amount * 2); 
-                status = 'won'; wonAdd = data.amount; lostAdd = 0; balanceChange = data.amount; 
+                freshU.balance += (data.amount * 2); 
+                freshU.totalWon += data.amount;
+                status = 'won'; 
+            } else {
+                freshU.totalLost += data.amount;
             }
             
-            socket.emit('gameResult', { tossResult: sideRes, status: status, newBalance: players[socket.id].balance, isPvp: false });
-            updateDBAsync(players[socket.id].phone, players[socket.id].name, balanceChange, 1, wonAdd, lostAdd);
+            await freshU.save();
+            socket.emit('gameResult', { tossResult: sideRes, status: status, newBalance: freshU.balance, isPvp: false });
+            if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
         }, 2500);
     });
 
-    // --- PVP DYNAMIC LOOP ENGINE (RAM First) ---
-    socket.on('createRoom', (data) => {
-        if(!players[socket.id] || players[socket.id].balance < data.amount) return;
+    // --- PVP STRICT DATABASE LOOP ENGINE ---
+    socket.on('createRoom', async (data) => {
+        if(!data.phone) return;
+        let u = await getAndUpdateUser(data.phone);
+        if(!u || u.balance < data.amount) return socket.emit('error', { message: 'Balance low!' });
+        
         let code = Math.floor(1000 + Math.random() * 9000).toString();
-        rooms[code] = { host: socket.id, guest: null, wager: data.amount, selectorSide: data.side, turn: socket.id };
+        rooms[code] = { host: socket.id, hostPhone: data.phone, guest: null, guestPhone: null, wager: data.amount, selectorSide: data.side, turn: socket.id };
         players[socket.id].currentRoom = code;
-        if(data.phone) players[socket.id].phone = data.phone;
         socket.join(code); socket.emit('roomCreated', { code: code, wager: data.amount, side: data.side });
     });
 
-    socket.on('joinRoom', (data) => {
+    socket.on('joinRoom', async (data) => {
         let room = rooms[data.code];
         if(!room || room.guest || socket.id === room.host) return socket.emit('error', { message: 'Invalid Room!' });
-        if(!players[socket.id] || players[socket.id].balance < room.wager) return socket.emit('error', { message: 'Balance low!' });
+        if(!data.phone) return; 
+        
+        let u = await getAndUpdateUser(data.phone);
+        if(!u || u.balance < room.wager) return socket.emit('error', { message: 'Balance low!' });
 
-        room.guest = socket.id; players[socket.id].currentRoom = data.code; 
-        if(data.phone) players[socket.id].phone = data.phone;
+        room.guest = socket.id; room.guestPhone = data.phone; 
+        players[socket.id].currentRoom = data.code; 
         socket.join(data.code); executePvpToss(data.code);
     });
 
-    function executePvpToss(roomCode) {
+    async function executePvpToss(roomCode) {
         let room = rooms[roomCode]; if(!room) return;
-        let hostP = players[room.host]; let guestP = players[room.guest];
         
-        if(!hostP || !guestP || hostP.balance < room.wager || guestP.balance < room.wager) {
-            io.to(roomCode).emit('pvpRoomClosedNotify', 'Insufficient user funds. Match terminated.'); return delete rooms[roomCode];
+        let hostDb = await getAndUpdateUser(room.hostPhone);
+        let guestDb = await getAndUpdateUser(room.guestPhone);
+        
+        if(!hostDb || !guestDb || hostDb.balance < room.wager || guestDb.balance < room.wager) {
+            io.to(roomCode).emit('pvpRoomClosedNotify', 'Insufficient user funds. Match terminated.'); 
+            return delete rooms[roomCode];
         }
 
-        hostP.balance -= room.wager; guestP.balance -= room.wager;
+        hostDb.balance -= room.wager; guestDb.balance -= room.wager;
+        hostDb.matchesPlayed += 1; guestDb.matchesPlayed += 1;
+        await hostDb.save(); await guestDb.save();
+
         io.to(roomCode).emit('pvpRematchMatchStarted', { message: "Coin In The Air! Tossing..." });
 
-        setTimeout(() => {
+        setTimeout(async () => {
+            let hFresh = await Player.findById(hostDb._id);
+            let gFresh = await Player.findById(guestDb._id);
+
             const result = Math.random() < 0.5 ? 'heads' : 'tails';
             let selectorWon = (result === room.selectorSide);
-            let winnerId = selectorWon ? room.turn : (room.turn === room.host ? room.guest : room.host);
+            let winnerSocketId = selectorWon ? room.turn : (room.turn === room.host ? room.guest : room.host);
             let pot = room.wager * 2;
-            let hostBalChange = -room.wager; let guestBalChange = -room.wager;
-            let hostWonAdd = 0, hostLostAdd = room.wager; let guestWonAdd = 0, guestLostAdd = room.wager;
 
-            if (winnerId === room.host) { hostP.balance += pot; hostBalChange = room.wager; hostWonAdd = room.wager; hostLostAdd = 0; } 
-            else { guestP.balance += pot; guestBalChange = room.wager; guestWonAdd = room.wager; guestLostAdd = 0; }
+            if (winnerSocketId === room.host) { 
+                hFresh.balance += pot; hFresh.totalWon += room.wager; gFresh.totalLost += room.wager; 
+            } else { 
+                gFresh.balance += pot; gFresh.totalWon += room.wager; hFresh.totalLost += room.wager; 
+            }
 
-            io.to(room.host).emit('updateBalance', { newBalance: hostP.balance });
-            io.to(room.guest).emit('updateBalance', { newBalance: guestP.balance });
-            io.to(room.host).emit('gameResult', { tossResult: result, status: (winnerId === room.host ? 'won' : 'lost'), newBalance: hostP.balance, isPvp: true });
-            io.to(room.guest).emit('gameResult', { tossResult: result, status: (winnerId === room.guest ? 'won' : 'lost'), newBalance: guestP.balance, isPvp: true });
+            await hFresh.save(); await gFresh.save();
+
+            io.to(room.host).emit('updateBalance', { newBalance: hFresh.balance });
+            io.to(room.guest).emit('updateBalance', { newBalance: gFresh.balance });
+            io.to(room.host).emit('gameResult', { tossResult: result, status: (winnerSocketId === room.host ? 'won' : 'lost'), newBalance: hFresh.balance, isPvp: true });
+            io.to(room.guest).emit('gameResult', { tossResult: result, status: (winnerSocketId === room.guest ? 'won' : 'lost'), newBalance: gFresh.balance, isPvp: true });
             
-            updateDBAsync(hostP.phone, hostP.name, hostBalChange, 1, hostWonAdd, hostLostAdd);
-            updateDBAsync(guestP.phone, guestP.name, guestBalChange, 1, guestWonAdd, guestLostAdd);
+            if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
         }, 2500);
     }
 
