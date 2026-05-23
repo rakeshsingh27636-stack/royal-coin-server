@@ -3,33 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/jpeg" href="icon.jpg">
+  <link rel="apple-touch-icon" href="icon.jpg">
+  <meta name="theme-color" content="#120002">
   <title>Royal Coin Toss</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700;900&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    :root { 
-        --gold-royal: #ffd700; 
-        --gold-light: #fffde7;
-        --gold-dark: #b8860b;
-        --burgundy-dark: #0a0001; 
-        --burgundy-light: #250006; 
-    }
-    body { 
-      font-family: 'Rajdhani', sans-serif; 
-      background: var(--burgundy-dark); 
-      background-image: radial-gradient(circle at 50% 30%, var(--burgundy-light) 0%, var(--burgundy-dark) 100%); 
-      color: #fff; display: flex; justify-content: center; align-items: center; 
-      min-height: 100vh; margin: 0; overflow: hidden; box-sizing: border-box;
-    }
+    :root { --gold-royal: #ffd700; --gold-light: #fffde7; --gold-dark: #b8860b; --burgundy-dark: #0a0001; --burgundy-light: #250006; }
+    body { font-family: 'Rajdhani', sans-serif; background: var(--burgundy-dark); background-image: radial-gradient(circle at 50% 30%, var(--burgundy-light) 0%, var(--burgundy-dark) 100%); color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; box-sizing: border-box; }
     #bg-coins-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 1; }
     .bg-coin { position: absolute; width: 25px; height: 25px; background: radial-gradient(circle at 30% 30%, #fffde7 0%, #ffd700 40%, #b8860b 100%); border-radius: 50%; border: 1px solid #daa520; opacity: 0.2; animation: floatCoin infinite linear alternate; }
     @keyframes floatCoin { 0% { transform: translateY(0) scale(1) rotateY(0deg); } 100% { transform: translateY(-40px) scale(1.1) rotateY(180deg); } }
-    .mobile-app { 
-      width: 100%; max-width: 400px; height: 100vh; 
-      background: linear-gradient(180deg, rgba(20,0,2,0.95) 0%, rgba(5,0,0,0.95) 100%); 
-      border: 2px solid rgba(255, 215, 0, 0.2); padding: 15px 20px; box-sizing: border-box; 
-      box-shadow: inset 0 0 50px rgba(255, 215, 0, 0.05); display: flex; flex-direction: column; justify-content: space-between; position: relative; z-index: 10; backdrop-filter: blur(10px); 
-    }
+    .mobile-app { width: 100%; max-width: 400px; height: 100vh; background: linear-gradient(180deg, rgba(20,0,2,0.95) 0%, rgba(5,0,0,0.95) 100%); border: 2px solid rgba(255, 215, 0, 0.2); padding: 15px 20px; box-sizing: border-box; box-shadow: inset 0 0 50px rgba(255, 215, 0, 0.05); display: flex; flex-direction: column; justify-content: space-between; position: relative; z-index: 10; backdrop-filter: blur(10px); }
     #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
     .header h1 { font-family: 'Orbitron', sans-serif; margin: 0; font-size: 26px; color: var(--gold-royal); text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 2px 0 #8a5a19; letter-spacing: 1px; text-align: center; }
     .fair-badge { font-family: 'Orbitron', sans-serif; font-size: 10px; color: #00ff99; text-align: center; margin-top: 2px; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 5px rgba(0,255,153,0.5); }
@@ -57,14 +44,14 @@
     .result-panel.loss { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); }
     .controls { background: linear-gradient(180deg, rgba(20,0,5,0.8), rgba(0,0,0,0.9)); border: 2px solid var(--gold-dark); border-radius: 18px; padding: 12px; }
     .wager-selector { display: flex; justify-content: space-between; align-items: center; background: #000; border: 2px solid #555; border-radius: 10px; padding: 6px 12px; margin-bottom: 12px; }
-    .wager-btn { background: transparent; border: none; color: var(--gold-royal); font-size: 28px; font-weight: bold; cursor: pointer; }
+    .wager-btn { background: transparent; border: none; color: var(--gold-royal); font-size: 28px; font-weight: bold; cursor: pointer; padding: 0 10px;}
     .wager-value { font-family: 'Orbitron', sans-serif; font-size: 17px; color: var(--gold-royal); font-weight: bold;}
     #wager-input { background: transparent; border: none; border-bottom: 2px dashed var(--gold-royal); color: var(--gold-royal); font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: bold; width: 75px; text-align: center; outline: none; }
     .side-row { display: flex; gap: 12px; margin-bottom: 12px; }
     .side-btn { flex: 1; padding: 12px 0; background: linear-gradient(180deg, #1a1a1a, #000); border: 2px solid var(--gold-dark); border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 900; color: var(--gold-royal); cursor: pointer; }
     .side-btn.selected { background: linear-gradient(180deg, #fffde7 0%, #ffd700 50%, #b8860b 100%); color: #2b1d00; border-color: #fff; }
     .action-btn { width: 100%; padding: 14px; border: 2px solid #fff; border-radius: 8px; background: linear-gradient(180deg, #fffde7 0%, #ffd700 40%, #996515 100%); color: #2b1d00; font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 900; text-transform: uppercase; cursor: pointer; letter-spacing: 1px;}
-    .pvp-btn { width: 100%; padding: 10px; border: 1px solid #00f0ff; border-radius: 8px; background: rgba(0,240,255,0.1); color: #00f0ff; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: bold; text-transform: uppercase; cursor: pointer; }
+    .pvp-btn { width: 100%; padding: 10px; border: 1px solid #00f0ff; border-radius: 8px; background: rgba(0,240,255,0.1); color: #00f0ff; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: bold; text-transform: uppercase; cursor: pointer; margin-top:8px;}
     @keyframes superGlitter { 0% { box-shadow: 0 0 5px #ffd700, inset 0 0 5px #ffd700; border-color: #ffd700; } 50% { box-shadow: 0 0 30px #fff, inset 0 0 15px #ffd700; border-color: #fff; transform: scale(1.02); } 100% { box-shadow: 0 0 5px #ffd700, inset 0 0 5px #ffd700; border-color: #ffd700; } }
     .glitter-active { animation: superGlitter 1s infinite alternate !important; border-color: #fff !important; }
     .live-ticker-patti { background: linear-gradient(90deg, rgba(255,215,0,0.05), rgba(0,0,0,0.9), rgba(255,215,0,0.05)); border-top: 1px solid rgba(255, 215, 0, 0.3); height: 26px; overflow: hidden; display: flex; align-items: center; margin-top: 10px; border-radius: 5px; }
@@ -80,15 +67,16 @@
     .withdraw-btn { background: linear-gradient(90deg, #ff416c, #ff4b2b); color: #fff;}
     .close-modal { color: var(--gold-royal); font-size: 12px; margin-top: 20px; cursor: pointer; text-decoration: underline; text-transform: uppercase;}
     .login-input { padding: 12px; background: #000; border: 1px solid var(--gold-royal); color: var(--gold-royal); font-family: 'Orbitron'; font-size: 16px; text-align: center; border-radius: 5px; width: 90%; margin: 0 auto; outline: none; }
+    .lock-icon { font-size: 40px; margin-bottom: 15px; }
   </style>
 </head>
 <body>
   <div id="bg-coins-container"></div>
   <div class="mobile-app">
     
-    <div class="modal-overlay" id="login-screen">
+    <div class="modal-overlay" id="login-screen" style="display:flex;">
       <div class="modal-card">
-        <div class="logo-coin" id="login-icon">🪙</div>
+        <div class="logo-coin" id="login-icon" style="font-size:60px; margin-bottom:10px;">🪙</div>
         <h2 id="login-title">ROYAL CASINO</h2>
         <p id="login-subtitle" style="color:#bbb; font-size:12px; margin-bottom:20px;">Register to create your Wallet</p>
         <div class="modal-row">
@@ -96,7 +84,7 @@
           <input type="number" id="user-mobile" class="login-input" placeholder="Mobile Number" />
           <button class="hub-btn deposit-btn" id="btn-login" onclick="startAppSession()">CREATE ID & SECURE LOCK</button>
         </div>
-        <p class="note-text" id="login-error" style="display:none;"></p>
+        <p style="color:#ff3366; font-size:11px; margin-top:10px; display:none;" id="login-error"></p>
       </div>
     </div>
 
@@ -110,6 +98,7 @@
           <button class="hub-btn deposit-btn" onclick="openDeposit()">📥 Add Funds (Deposit)</button>
           <button class="hub-btn withdraw-btn" onclick="openWithdraw()">📤 Withdraw to Bank</button>
         </div>
+        
         <div style="margin-top: 25px; border-top: 1px dashed var(--gold-royal); padding-top: 15px;">
           <p style="color: var(--gold-royal); font-size: 13px; margin: 0 0 8px 0; font-weight: bold; letter-spacing: 1px;">🎁 REDEEM SPECIAL COUPON</p>
           <input type="text" id="coupon-code-input" class="login-input" placeholder="Enter Coupon Code" style="text-transform: uppercase; width: 85%; margin-bottom: 10px;" />
@@ -227,6 +216,7 @@
   </div>
 
   <script>
+    // BG Coins
     const bgContainer = document.getElementById('bg-coins-container');
     for(let i=0; i<15; i++){
         let c = document.createElement('div'); c.className = 'bg-coin';
@@ -239,31 +229,25 @@
     let currentBalance = 0; let selectedWager = 100; let lockedSide = null;
     let userName = ""; let userPhone = ""; let rematchSide = null;
 
+    // LOGIN & SECURITY HELPERS
     function bufferEncode(value) { return btoa(String.fromCharCode.apply(null, new Uint8Array(value))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
     function bufferDecode(value) { return Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)); }
-
     let savedName = localStorage.getItem('royalUserName');
     let savedPhone = localStorage.getItem('royalUserPhone');
     let savedBioCred = localStorage.getItem('royalBioCred');
 
+    // GLITTER GUIDANCE
     function updateGuidance() {
         document.getElementById("funds-btn").classList.remove("glitter-active");
         document.getElementById("wager-selector-box").classList.remove("glitter-active");
         document.getElementById("btn-heads").classList.remove("glitter-active");
         document.getElementById("btn-tails").classList.remove("glitter-active");
         document.getElementById("toss-button").classList.remove("glitter-active");
-
         if(document.getElementById("toss-button").disabled) return;
-
-        if (currentBalance < 100) {
-            document.getElementById("funds-btn").classList.add("glitter-active");
-        } else if (!lockedSide) {
-            document.getElementById("wager-selector-box").classList.add("glitter-active");
-            document.getElementById("btn-heads").classList.add("glitter-active");
-            document.getElementById("btn-tails").classList.add("glitter-active");
-        } else {
-            document.getElementById("toss-button").classList.add("glitter-active");
-        }
+        
+        if (currentBalance < 100) { document.getElementById("funds-btn").classList.add("glitter-active"); } 
+        else if (!lockedSide) { document.getElementById("wager-selector-box").classList.add("glitter-active"); document.getElementById("btn-heads").classList.add("glitter-active"); document.getElementById("btn-tails").classList.add("glitter-active"); } 
+        else { document.getElementById("toss-button").classList.add("glitter-active"); }
     }
 
     window.onload = () => {
@@ -279,6 +263,7 @@
         updateGuidance();
     };
 
+    // LOGIN SYSTEM
     async function startAppSession() {
         let nameInput = document.getElementById('user-name').value;
         let phoneInput = document.getElementById('user-mobile').value;
@@ -294,6 +279,7 @@
             } catch(e) { btn.innerText = "🔓 UNLOCK APP"; errorTxt.innerText = "Authentication Failed!"; errorTxt.style.display = "block"; }
         } else {
             if(nameInput.trim() === "" || phoneInput.trim() === "") { errorTxt.innerText = "Please fill both fields!"; errorTxt.style.display = "block"; return; }
+            if(!window.PublicKeyCredential) { localStorage.setItem('royalUserName', nameInput); localStorage.setItem('royalUserPhone', phoneInput); userName = nameInput; userPhone = phoneInput; finalizeLogin(); return; }
             try {
                 btn.innerText = "CREATING LOCK...";
                 const publicKey = { challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: "Royal Casino", id: window.location.hostname }, user: { id: crypto.getRandomValues(new Uint8Array(16)), name: nameInput, displayName: nameInput }, pubKeyCredParams: [{alg: -7, type: "public-key"}, {alg: -257, type: "public-key"}], authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }, timeout: 60000, attestation: "none" };
@@ -307,10 +293,12 @@
     function finalizeLogin() {
         document.getElementById("player-display-name").innerHTML = userName;
         document.getElementById("login-screen").style.display = "none";
-        socket.emit('setUserData', { name: userName, phone: userPhone });
+        socket.emit('setUserData', { name: userName, phone: userPhone }); // Sends to backend for DB lookup
+        if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
         updateGuidance();
     }
 
+    // AUDIO & CONFETTI SYSTEM
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(type) {
         try {
@@ -322,45 +310,37 @@
             else if(type === 'loss') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
         } catch(e) {}
     }
-
     const canvas = document.getElementById("confetti-canvas"); const ctx = canvas.getContext("2d"); let particles = [];
     function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; } window.addEventListener('resize', resizeCanvas); resizeCanvas();
     function spawnGoldRain() { particles = []; for(let i=0; i<45; i++) { particles.push({ x: Math.random() * canvas.width, y: Math.random() * -200 - 50, r: Math.random() * 8 + 10, tilt: Math.random() * Math.PI, tiltSpeed: Math.random() * 0.2 + 0.05, speedY: Math.random() * 4 + 3 }); } requestAnimationFrame(updateGoldRain); }
     function updateGoldRain() { ctx.clearRect(0, 0, canvas.width, canvas.height); let active = false; particles.forEach(p => { p.y += p.speedY; p.tilt += p.tiltSpeed; ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, Math.abs(Math.sin(p.tilt))); ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 2 * Math.PI); let grad = ctx.createLinearGradient(-p.r, -p.r, p.r, p.r); grad.addColorStop(0, "#fffde7"); grad.addColorStop(0.3, "#ffd700"); grad.addColorStop(1, "#b8860b"); ctx.fillStyle = grad; ctx.fill(); ctx.restore(); if(p.y < canvas.height + 50) active = true; }); if(active) requestAnimationFrame(updateGoldRain); }
 
+    // FUNDS MODALS
     function toggleModal(id, show) { playSound('click'); document.getElementById(id).style.display = show ? "flex" : "none"; updateGuidance(); }
     function backToFundsMain() { document.getElementById("funds-main").style.display = "block"; document.getElementById("deposit-screen").style.display = "none"; document.getElementById("withdraw-screen").style.display = "none"; document.getElementById("qr-dynamic-area").innerHTML = `<input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" value="0" onblur="validateDeposit()"/><button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI QR</button>`; }
     function openDeposit() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("deposit-screen").style.display = "block"; }
     function openWithdraw() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("withdraw-screen").style.display = "block"; }
 
-    // COUPON REDEEM SYSTEM
+    // COUPON LOGIC
     function submitCoupon() {
         let code = document.getElementById("coupon-code-input").value.trim().toUpperCase();
         if(code === "") return alert("Please enter coupon code!");
-        playSound('click');
-        socket.emit('redeemCoupon', { code: code });
+        playSound('click'); socket.emit('redeemCoupon', { code: code });
     }
     socket.on('couponResult', (data) => {
         alert(data.message);
-        if(data.status === 'success') {
-            spawnGoldRain();
-            document.getElementById("coupon-code-input").value = "";
-            toggleModal('fundsModal', false);
-        }
+        if(data.status === 'success') { spawnGoldRain(); document.getElementById("coupon-code-input").value = ""; toggleModal('fundsModal', false); }
     });
 
-    function validateDeposit() {
-        let inputField = document.getElementById("deposit-amount"); let val = parseInt(inputField.value);
-        if (isNaN(val) || val < 100) val = 100;
-        val = Math.round(val / 50) * 50; inputField.value = val;
-    }
-    function showManualQRCode() {
-        let amount = parseInt(document.getElementById("deposit-amount").value); validateDeposit();
-        document.getElementById("qr-dynamic-area").innerHTML = `<p style="color:#ffd700; margin:0;">SCAN QR & PAY EXACTLY: ₹${amount}</p><img src="qr.jpg" alt="UPI QR" style="width:180px; height:180px; border:3px solid var(--gold-royal); margin:5px auto; border-radius:10px;"><input type="number" id="utr-number-input" class="login-input" placeholder="Enter 12-Digit UTR Number" /><button class="hub-btn deposit-btn" onclick="submitUTR(${amount})">SUBMIT DEPOSIT REQUEST</button>`;
-    }
-    function submitUTR(amount) { let utr = document.getElementById("utr-number-input").value; if(utr.trim().length !== 12) return alert("UTR must be 12 digits!"); socket.emit('submitManualDeposit', { amount: amount, utr: utr }); document.getElementById("qr-dynamic-area").innerHTML = `<h3>VERIFICATION PENDING</h3>`; }
-    function submitWithdrawal() { let amount = parseInt(document.getElementById("withdraw-amount").value); let upiId = document.getElementById("withdraw-upi").value; if (amount < 1000) return alert("Minimum withdrawal limit is ₹1000!"); if(upiId.trim() === "" || amount > currentBalance) return alert("Invalid inputs or insufficient balance!"); socket.emit('withdrawFunds', { amount: amount, upi: upiId }); alert("Withdrawal requested!"); toggleModal('fundsModal', false); backToFundsMain(); }
+    // DEPOSIT/WITHDRAW LOGIC
+    function validateDeposit() { let inputField = document.getElementById("deposit-amount"); let val = parseInt(inputField.value); if (isNaN(val) || val < 100) val = 100; val = Math.round(val / 50) * 50; inputField.value = val; }
+    function showManualQRCode() { let amount = parseInt(document.getElementById("deposit-amount").value); validateDeposit(); document.getElementById("qr-dynamic-area").innerHTML = `<p style="color:#ffd700; margin:0;">SCAN QR & PAY EXACTLY: ₹${amount}</p><img src="qr.jpg" alt="UPI QR" style="width:180px; height:180px; border:3px solid var(--gold-royal); margin:5px auto; border-radius:10px;"><input type="number" id="utr-number-input" class="login-input" placeholder="Enter 12-Digit UTR Number" /><button class="hub-btn deposit-btn" onclick="submitUTR(${amount})">SUBMIT DEPOSIT REQUEST</button>`; }
+    function submitUTR(amount) { let utr = document.getElementById("utr-number-input").value; if(utr.trim().length !== 12) return alert("UTR must be 12 digits!"); socket.emit('submitManualDeposit', { amount: amount, utr: utr }); document.getElementById("qr-dynamic-area").innerHTML = `<h3 style="color:#ffd700;">VERIFICATION PENDING</h3>`; }
+    socket.on('depositResult', (data) => { if(data.status === 'success') { alert(`🎉 EXCELLENT! ₹${data.amount} added.`); spawnGoldRain(); } else { alert("❌ PAYMENT REJECTED!"); } toggleModal('fundsModal', false); backToFundsMain(); });
+    
+    function submitWithdrawal() { let amount = parseInt(document.getElementById("withdraw-amount").value); let upiId = document.getElementById("withdraw-upi").value; if (amount < 1000) return alert("Minimum withdrawal is ₹1000!"); if(upiId.trim() === "" || amount > currentBalance) return alert("Invalid details or balance!"); socket.emit('withdrawFunds', { amount: amount, upi: upiId }); alert("Withdrawal requested!"); toggleModal('fundsModal', false); backToFundsMain(); }
 
+    // WAGER LOGIC
     function validateWager() {
         let inputField = document.getElementById("wager-input"); let typedVal = parseInt(inputField.value);
         if (isNaN(typedVal) || typedVal < 100) typedVal = 100;
@@ -368,128 +348,73 @@
         if (currentBalance > 0 && typedVal > currentBalance) { typedVal = Math.floor(currentBalance / 100) * 100; if(typedVal < 100) typedVal = 100; }
         selectedWager = typedVal; inputField.value = selectedWager; updateGuidance();
     }
-    function changeWager(val) { if(document.getElementById("toss-button").disabled) return; selectedWager += val; if(selectedWager < 100) selectedWager = 100; document.getElementById("wager-input").value = selectedWager; validateWager(); }
-    function selectSide(side) { if(document.getElementById("toss-button").disabled) return; validateWager(); lockedSide = side; document.getElementById("btn-heads").classList.remove('selected'); document.getElementById("btn-tails").classList.remove('selected'); document.getElementById("btn-" + side).classList.add('selected'); updateGuidance(); }
+    function changeWager(val) { if(document.getElementById("toss-button").disabled) return; playSound('click'); selectedWager += val; if(selectedWager < 100) selectedWager = 100; document.getElementById("wager-input").value = selectedWager; validateWager(); }
+    function selectSide(side) { if(document.getElementById("toss-button").disabled) return; playSound('click'); validateWager(); lockedSide = side; document.getElementById("btn-heads").classList.remove('selected'); document.getElementById("btn-tails").classList.remove('selected'); document.getElementById("btn-" + side).classList.add('selected'); document.getElementById("status-terminal").innerHTML = `LOCKED ON: ${side.toUpperCase()}`; updateGuidance(); }
 
+    // GLOBAL GAMEPLAY
     function startRoyalGame() {
         validateWager(); if(!lockedSide) return alert("Select side first!"); if(selectedWager > currentBalance) return alert("Insufficient balance!");
-        document.getElementById("toss-button").disabled = true; updateGuidance();
+        playSound('click'); document.getElementById("toss-button").disabled = true; updateGuidance();
+        document.getElementById("status-terminal").innerHTML = "SEARCHING GLOBAL LOBBY..."; document.getElementById("bot-name").innerHTML = "Searching..."; document.getElementById("bot-img").innerHTML = "⌛";
         socket.emit('placeBet', { side: lockedSide, amount: selectedWager });
     }
+    
+    socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); updateGuidance(); });
+    socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
+    socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; updateGuidance(); });
 
-    socket.on('matchmakingStarted', (data) => { document.getElementById("bot-name").innerHTML = data.bot.name; document.getElementById("bot-img").innerHTML = data.bot.avatar; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+    socket.on('matchmakingStarted', (data) => { document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; document.getElementById("bot-name").innerHTML = data.bot.name; document.getElementById("bot-img").innerHTML = data.bot.avatar; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
     
     socket.on('gameResult', (data) => {
         const coin = document.getElementById("coin-object");
         coin.className = data.tossResult === 'heads' ? "coin coin-stop-heads" : "coin coin-stop-tails";
         setTimeout(() => {
-            if(data.status === 'won') { playSound('win'); spawnGoldRain(); } else { playSound('loss'); }
+            if(data.status === 'won') { playSound('win'); spawnGoldRain(); document.getElementById("status-terminal").className = "result-panel win"; } 
+            else { playSound('loss'); document.getElementById("status-terminal").className = "result-panel loss"; }
             document.getElementById("status-terminal").innerHTML = `${data.status.toUpperCase()}! Result: ${data.tossResult.toUpperCase()}`;
-            currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00";
-            document.getElementById("toss-button").disabled = false;
-            updateGuidance();
+            document.getElementById("toss-button").disabled = false; updateGuidance();
 
-            // PVP mode setup post game modal triggers
+            // PVP Rematch Loop Integration
             if(data.isPvp) {
-                document.getElementById('pvp-options').style.display = "none";
-                document.getElementById('pvp-waiting').style.display = "none";
-                document.getElementById('pvp-rematch-prompt').style.display = "none";
-                document.getElementById('pvp-rematch-setup').style.display = "none";
-                
+                document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none";
                 document.getElementById('pvp-match-result-text').innerText = data.status === 'won' ? "🎉 YOU WON DOUBLE POT!" : "😢 YOU LOST THIS ROUND!";
-                document.getElementById('pvp-post-match').style.display = "block";
-                toggleModal('pvpModal', true);
+                document.getElementById('pvp-post-match').style.display = "block"; toggleModal('pvpModal', true);
             }
         }, 600);
     });
 
-    // PVP REMATCH PROCESS HANDLERS
-    function clickPvpPlayAgain() {
-        if(currentBalance < 100) {
-            alert("Insufficient Funds! Add money first.");
-            toggleModal('pvpModal', false);
-            toggleModal('fundsModal', true);
-            return;
-        }
-        playSound('click');
-        document.getElementById('pvp-post-match').innerHTML = "⏳ Waiting for friend's approval...";
-        socket.emit('pvpRequestRematch');
-    }
-    function clickPvpExit() { playSound('click'); socket.emit('pvpExitRoom'); toggleModal('pvpModal', false); }
-
-    socket.on('pvpPromptRematchInvite', () => {
-        document.getElementById('pvp-post-match').style.display = "none";
-        document.getElementById('pvp-rematch-prompt').style.display = "block";
-        toggleModal('pvpModal', true);
-    });
-
-    function responseRematch(action) {
-        playSound('click');
-        if(action === 'join' && currentBalance < 100) {
-            alert("Insufficient Balance! Kripya deposit karein.");
-            socket.emit('pvpRematchResponse', { action: 'exit' });
-            toggleModal('pvpModal', false);
-            toggleModal('fundsModal', true);
-            return;
-        }
-        socket.emit('pvpRematchResponse', { action: action });
-    }
-
-    socket.on('pvpSetupTurnChoice', () => {
-        document.getElementById('pvp-options').style.display = "none";
-        document.getElementById('pvp-post-match').style.display = "none";
-        document.getElementById('pvp-rematch-prompt').style.display = "none";
-        document.getElementById('pvp-rematch-setup').style.display = "block";
-        rematchSide = null;
-        document.getElementById('rematch-btn-heads').classList.remove('selected');
-        document.getElementById('rematch-btn-tails').classList.remove('selected');
-        toggleModal('pvpModal', true);
-    });
-
-    socket.on('pvpWaitingForFriendTurn', () => {
-        document.getElementById('pvp-options').style.display = "none";
-        document.getElementById('pvp-post-match').style.display = "none";
-        document.getElementById('pvp-rematch-prompt').style.display = "none";
-        document.getElementById('pvp-rematch-setup').style.display = "none";
-        document.getElementById('pvp-waiting').style.display = "block";
-        document.getElementById('my-room-code').innerText = "LOOP";
-        document.getElementById('room-wager-info').innerText = "Friend is deciding bet values & sides...";
-        toggleModal('pvpModal', true);
-    });
-
-    function selectRematchSide(side) {
-        playSound('click'); rematchSide = side;
-        document.getElementById('rematch-btn-heads').classList.remove('selected');
-        document.getElementById('rematch-btn-tails').classList.remove('selected');
-        document.getElementById('rematch-btn-' + side).classList.add('selected');
-    }
-
-    function submitRematchChoices() {
-        let wager = parseInt(document.getElementById('pvp-rematch-wager').value);
-        wager = Math.round(wager / 100) * 100; if(wager < 100) wager = 100;
-        if(wager > currentBalance) return alert("Insufficient balance for this bet!");
-        if(!rematchSide) return alert("Select your Side (Heads/Tails) first!");
-        
-        socket.emit('pvpSubmitRematchChoices', { wager: wager, side: rematchSide });
-        toggleModal('pvpModal', false);
-    }
-
-    socket.on('pvpRematchMatchStarted', (data) => {
-        toggleModal('pvpModal', false);
-        document.getElementById("status-terminal").innerHTML = data.message;
-        let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200);
-        setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("coin-object").className = "coin flipping"; }, 1500);
-    });
-
-    socket.on('pvpRoomClosedNotify', (msg) => { alert(msg); toggleModal('pvpModal', false); });
-    socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); updateGuidance(); });
-    socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
-    socket.on('error', (data) => { alert(data.message); toggleModal('pvpModal', false); });
-
-    function openPvPMenu() { validateWager(); if(!lockedSide) return alert("Select side first!"); if(selectedWager > currentBalance) return alert("Balance low!"); document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
+    // PVP & REMATCH LOOP ENGINE
+    function openPvPMenu() { validateWager(); if(!lockedSide) return alert("Pehle HEADS ya TAILS select kijiye!"); if(selectedWager > currentBalance) return alert("Balance kam hai!"); document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
     function createRoom() { socket.emit('createRoom', { amount: selectedWager, side: lockedSide }); }
     socket.on('roomCreated', (data) => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerHTML = data.code; document.getElementById('room-wager-info').innerHTML = `Wager: ₹${data.wager} | Side: ${data.side.toUpperCase()}`; });
     function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code }); } else { alert("Enter 4-Digit Code!"); } }
+
+    function clickPvpPlayAgain() {
+        if(currentBalance < 100) { alert("Insufficient Funds! Add money first."); toggleModal('pvpModal', false); toggleModal('fundsModal', true); return; }
+        playSound('click'); document.getElementById('pvp-post-match').innerHTML = "<h3 style='color:#ffd700;'>⏳ Waiting for friend's approval...</h3>"; socket.emit('pvpRequestRematch');
+    }
+    function clickPvpExit() { playSound('click'); socket.emit('pvpExitRoom'); toggleModal('pvpModal', false); }
+
+    socket.on('pvpPromptRematchInvite', () => { document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "block"; toggleModal('pvpModal', true); });
+
+    function responseRematch(action) {
+        playSound('click');
+        if(action === 'join' && currentBalance < 100) { alert("Insufficient Balance! Kripya deposit karein."); socket.emit('pvpRematchResponse', { action: 'exit' }); toggleModal('pvpModal', false); toggleModal('fundsModal', true); return; }
+        socket.emit('pvpRematchResponse', { action: action });
+    }
+
+    socket.on('pvpSetupTurnChoice', () => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "block"; rematchSide = null; document.getElementById('rematch-btn-heads').classList.remove('selected'); document.getElementById('rematch-btn-tails').classList.remove('selected'); toggleModal('pvpModal', true); });
+    socket.on('pvpWaitingForFriendTurn', () => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerText = "LOOP"; document.getElementById('room-wager-info').innerText = "Friend is deciding bet values & sides..."; toggleModal('pvpModal', true); });
+
+    function selectRematchSide(side) { playSound('click'); rematchSide = side; document.getElementById('rematch-btn-heads').classList.remove('selected'); document.getElementById('rematch-btn-tails').classList.remove('selected'); document.getElementById('rematch-btn-' + side).classList.add('selected'); }
+    function submitRematchChoices() {
+        let wager = parseInt(document.getElementById('pvp-rematch-wager').value); wager = Math.round(wager / 100) * 100; if(wager < 100) wager = 100;
+        if(wager > currentBalance) return alert("Insufficient balance for this bet!"); if(!rematchSide) return alert("Select your Side!");
+        playSound('click'); socket.emit('pvpSubmitRematchChoices', { wager: wager, side: rematchSide }); toggleModal('pvpModal', false);
+    }
+    
+    socket.on('pvpRematchMatchStarted', (data) => { toggleModal('pvpModal', false); document.getElementById("status-terminal").className = "result-panel"; document.getElementById("status-terminal").innerHTML = data.message; document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; document.getElementById("bot-img").innerHTML = "😎"; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+    socket.on('pvpRoomClosedNotify', (msg) => { alert(msg); toggleModal('pvpModal', false); });
   </script>
 </body>
 </html>
