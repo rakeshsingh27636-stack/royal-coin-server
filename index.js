@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.static(__dirname));
 
 // MONGODB ATLAS CONNECTION
-const dbURI = "mongodb+srv://royalcoin:db_Hemant%40321@cluster0.xdnwkjr.mongodb.net/royalcasino?retryWrites=true&w=majority";
+const dbURI = "mongodb+srv://royalcoin:db_Hemant%40123@cluster0.xdnwkjr.mongodb.net/royalcasino?retryWrites=true&w=majority";
 mongoose.connect(dbURI)
     .then(() => console.log("✅ MongoDB Connected!"))
     .catch((err) => console.log("❌ Database Connection Error: ", err));
