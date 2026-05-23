@@ -40,7 +40,6 @@ app.get('/admin-secret-panel', (req, res) => {
             <script>
                 const socket = io();
                 
-                // Request admin identification
                 socket.emit('registerAdmin');
 
                 socket.on('adminViewRequests', (requests) => {
@@ -70,12 +69,8 @@ app.get('/admin-secret-panel', (req, res) => {
                     }
                 });
 
-                function approve(reqId) {
-                    socket.emit('adminAction', { requestId: reqId, action: 'approve' });
-                }
-                function reject(reqId) {
-                    socket.emit('adminAction', { requestId: reqId, action: 'reject' });
-                }
+                function approve(reqId) { socket.emit('adminAction', { requestId: reqId, action: 'approve' }); }
+                function reject(reqId) { socket.emit('adminAction', { requestId: reqId, action: 'reject' }); }
             </script>
         </body>
         </html>
@@ -87,6 +82,7 @@ const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } 
 
 let players = {};
 let pendingDeposits = {};
+let rooms = {}; // YE NAYA HAI ASLI PVP KE LIYE
 let adminSocketId = null;
 
 function getRandomBot() {
@@ -103,7 +99,6 @@ setInterval(() => {
 }, 3500);
 
 io.on('connection', (socket) => {
-    // START WITH 0 RS BALANCE FOR NEW USERS
     players[socket.id] = { balance: 0, name: "Guest", phone: "" };
     socket.emit('updateBalance', { newBalance: players[socket.id].balance });
 
@@ -119,25 +114,18 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Handle Manual Deposit Submission
     socket.on('submitManualDeposit', (data) => {
         if(players[socket.id]) {
             pendingDeposits[socket.id] = {
-                name: players[socket.id].name,
-                phone: players[socket.id].phone,
-                amount: data.amount,
-                utr: data.utr
+                name: players[socket.id].name, phone: players[socket.id].phone,
+                amount: data.amount, utr: data.utr
             };
-            if(adminSocketId) {
-                io.to(adminSocketId).emit('adminViewRequests', pendingDeposits);
-            }
+            if(adminSocketId) io.to(adminSocketId).emit('adminViewRequests', pendingDeposits);
         }
     });
 
-    // Admin Action Logic (Approve / Reject)
     socket.on('adminAction', (data) => {
         if(socket.id !== adminSocketId) return;
-        
         const targetPlayerId = data.requestId;
         const depositData = pendingDeposits[targetPlayerId];
 
@@ -176,31 +164,61 @@ io.on('connection', (socket) => {
         }, 2500);
     });
 
+    // --- REAL PVP SYSTEM STARTS HERE ---
+
     socket.on('createRoom', (data) => {
         if(!players[socket.id] || players[socket.id].balance < data.amount) {
             socket.emit('error', { message: 'Insufficient balance' }); return;
         }
-        socket.emit('roomCreated', { code: "1234", wager: data.amount, side: data.side });
-        setTimeout(() => {
-            socket.emit('pvpMatchStarted', { message: "Friend Joined! Match starting..." });
-            setTimeout(() => {
-                const outcomes = ['heads', 'tails'];
-                const tossResult = outcomes[Math.floor(Math.random() * outcomes.length)];
-                let status = (tossResult === data.side) ? 'won' : 'lost';
-                if(status === 'won') players[socket.id].balance += data.amount; else players[socket.id].balance -= data.amount;
-                socket.emit('gameResult', { tossResult: tossResult, status: status, newBalance: players[socket.id].balance });
-            }, 2500);
-        }, 4000);
+        
+        let roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+        rooms[roomCode] = { host: socket.id, wager: data.amount, hostSide: data.side, guest: null };
+        
+        socket.join(roomCode);
+        socket.emit('roomCreated', { code: roomCode, wager: data.amount, side: data.side });
     });
 
     socket.on('joinRoom', (data) => {
-        socket.emit('pvpMatchStarted', { message: "Joined Room! Match starting..." });
+        let roomCode = data.code;
+        let room = rooms[roomCode];
+
+        if(!room) { socket.emit('error', { message: 'Invalid Room Code!' }); return; }
+        if(!players[socket.id] || players[socket.id].balance < room.wager) { socket.emit('error', { message: 'Balance kam hai room join karne ke liye!' }); return; }
+        if(socket.id === room.host) { socket.emit('error', { message: 'Aap apna hi room join nahi kar sakte!' }); return; }
+
+        room.guest = socket.id;
+        socket.join(roomCode);
+
+        // Deduct balance from both players
+        players[room.host].balance -= room.wager;
+        players[room.guest].balance -= room.wager;
+        io.to(room.host).emit('updateBalance', { newBalance: players[room.host].balance });
+        io.to(room.guest).emit('updateBalance', { newBalance: players[room.guest].balance });
+
+        io.to(roomCode).emit('pvpMatchStarted', { message: "Friend Joined! Tossing Coin..." });
+
         setTimeout(() => {
             const outcomes = ['heads', 'tails'];
             const tossResult = outcomes[Math.floor(Math.random() * outcomes.length)];
-            socket.emit('gameResult', { tossResult: tossResult, status: 'lost', newBalance: players[socket.id].balance });
+            
+            let hostWon = (tossResult === room.hostSide);
+            let prize = room.wager * 2; // Total pot
+
+            if(hostWon) {
+                players[room.host].balance += prize;
+                io.to(room.host).emit('gameResult', { tossResult: tossResult, status: 'won', newBalance: players[room.host].balance });
+                io.to(room.guest).emit('gameResult', { tossResult: tossResult, status: 'lost', newBalance: players[room.guest].balance });
+            } else {
+                players[room.guest].balance += prize;
+                io.to(room.guest).emit('gameResult', { tossResult: tossResult, status: 'won', newBalance: players[room.guest].balance });
+                io.to(room.host).emit('gameResult', { tossResult: tossResult, status: 'lost', newBalance: players[room.host].balance });
+            }
+
+            delete rooms[roomCode]; // Clean room after match
         }, 2500);
     });
+
+    // --- REAL PVP SYSTEM ENDS HERE ---
 
     socket.on('disconnect', () => { 
         delete players[socket.id]; 
