@@ -63,7 +63,7 @@
     .modal-card h2 { font-family: 'Orbitron', sans-serif; color: var(--gold-royal); margin: 0; text-shadow: 0 0 15px rgba(255,215,0,0.6); }
     .modal-row { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
     .hub-btn { padding: 14px; border: 1px solid #fff; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-    .deposit-btn { background: linear-gradient(90deg, #00b4db, #00ff99); color: #000;}
+    .deposit-btn { background: linear-gradient(90deg, #00b4db, #00ff99); color: #000; text-decoration: none;}
     .withdraw-btn { background: linear-gradient(90deg, #ff416c, #ff4b2b); color: #fff;}
     .close-modal { color: var(--gold-royal); font-size: 12px; margin-top: 20px; cursor: pointer; text-decoration: underline; text-transform: uppercase;}
     .login-input { padding: 12px; background: #000; border: 1px solid var(--gold-royal); color: var(--gold-royal); font-family: 'Orbitron'; font-size: 16px; text-align: center; border-radius: 5px; width: 90%; margin: 0 auto; outline: none; }
@@ -111,7 +111,7 @@
         <h2>DEPOSIT FUNDS</h2>
         <div class="modal-row" id="qr-dynamic-area">
           <input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" value="0" onblur="validateDeposit()"/>
-          <button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI QR</button>
+          <button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI LINK</button>
         </div>
         <div class="close-modal" onclick="backToFundsMain()">Back</div>
       </div>
@@ -226,22 +226,20 @@
 
     const socket = io(); 
     let currentBalance = 0; let selectedWager = 100; let lockedSide = null;
-    let userName = ""; let userPhone = ""; let rematchSide = null;
+    let userName = localStorage.getItem('royalUserName') || ""; 
+    let userPhone = localStorage.getItem('royalUserPhone') || ""; 
+    let savedBioCred = localStorage.getItem('royalBioCred');
+    let rematchSide = null;
+
+    // YOUR ADMIN UPI ID FOR PAYMENTS (Change this to your actual UPI ID)
+    const MY_UPI_ID = "royalcasino@ybl"; 
 
     function bufferEncode(value) { return btoa(String.fromCharCode.apply(null, new Uint8Array(value))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
     function bufferDecode(value) { return Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)); }
     
-    // FETCH LOCAL STORAGE 
-    let savedName = localStorage.getItem('royalUserName');
-    let savedPhone = localStorage.getItem('royalUserPhone');
-    let savedBioCred = localStorage.getItem('royalBioCred');
-
-    // EXTREME AUTO RECONNECT (Even if minimized)
+    // ALWAYS SYNC BALANCE ON RECONNECT
     socket.on('connect', () => {
-        if(savedName && savedPhone) {
-            userName = savedName; userPhone = savedPhone;
-            socket.emit('setUserData', { name: userName, phone: userPhone });
-        }
+        if(userName && userPhone) { socket.emit('setUserData', { name: userName, phone: userPhone }); }
     });
 
     function updateGuidance() {
@@ -258,13 +256,13 @@
     }
 
     window.onload = () => {
-        if(savedPhone && savedBioCred) {
+        if(userPhone && savedBioCred) {
             document.getElementById('user-name').style.display = 'none';
             document.getElementById('user-mobile').style.display = 'none';
             document.getElementById('login-icon').innerHTML = "🔒";
             document.getElementById('login-icon').className = "lock-icon";
             document.getElementById('login-title').innerText = "WALLET LOCKED";
-            document.getElementById('login-subtitle').innerText = "Welcome back, " + savedName;
+            document.getElementById('login-subtitle').innerText = "Welcome back, " + userName;
             document.getElementById('btn-login').innerText = "🔓 UNLOCK APP";
         }
         updateGuidance();
@@ -276,12 +274,12 @@
         let errorTxt = document.getElementById('login-error');
         let btn = document.getElementById('btn-login');
 
-        if(savedPhone && savedBioCred) {
+        if(userPhone && savedBioCred) {
             try {
                 btn.innerText = "VERIFYING...";
                 const publicKey = { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ id: bufferDecode(savedBioCred), type: 'public-key' }], userVerification: 'required', timeout: 60000 };
                 await navigator.credentials.get({ publicKey });
-                userName = savedName; userPhone = savedPhone; finalizeLogin();
+                finalizeLogin();
             } catch(e) { btn.innerText = "🔓 UNLOCK APP"; errorTxt.innerText = "Authentication Cancelled!"; errorTxt.style.display = "block"; }
         } else {
             if(nameInput.trim() === "" || phoneInput.trim() === "") { errorTxt.innerText = "Please fill both fields!"; errorTxt.style.display = "block"; return; }
@@ -321,32 +319,44 @@
     function updateGoldRain() { ctx.clearRect(0, 0, canvas.width, canvas.height); let active = false; particles.forEach(p => { p.y += p.speedY; p.tilt += p.tiltSpeed; ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, Math.abs(Math.sin(p.tilt))); ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 2 * Math.PI); let grad = ctx.createLinearGradient(-p.r, -p.r, p.r, p.r); grad.addColorStop(0, "#fffde7"); grad.addColorStop(0.3, "#ffd700"); grad.addColorStop(1, "#b8860b"); ctx.fillStyle = grad; ctx.fill(); ctx.restore(); if(p.y < canvas.height + 50) active = true; }); if(active) requestAnimationFrame(updateGoldRain); }
 
     function toggleModal(id, show) { playSound('click'); document.getElementById(id).style.display = show ? "flex" : "none"; updateGuidance(); }
-    function backToFundsMain() { document.getElementById("funds-main").style.display = "block"; document.getElementById("deposit-screen").style.display = "none"; document.getElementById("withdraw-screen").style.display = "none"; document.getElementById("qr-dynamic-area").innerHTML = `<input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" value="0" onblur="validateDeposit()"/><button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI QR</button>`; }
+    function backToFundsMain() { document.getElementById("funds-main").style.display = "block"; document.getElementById("deposit-screen").style.display = "none"; document.getElementById("withdraw-screen").style.display = "none"; document.getElementById("qr-dynamic-area").innerHTML = `<input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" value="0" onblur="validateDeposit()"/><button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI LINK</button>`; }
     function openDeposit() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("deposit-screen").style.display = "block"; }
     function openWithdraw() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("withdraw-screen").style.display = "block"; }
 
-    // HYBRID FAIL-SAFE ACTION CALLS
     function submitCoupon() {
         let code = document.getElementById("coupon-code-input").value.trim().toUpperCase();
         if(code === "") return alert("Please enter coupon code!");
         playSound('click'); 
-        
-        // Grab local storage directly to ensure it never fails
-        let currentPhone = userPhone || localStorage.getItem('royalUserPhone');
-        let currentName = userName || localStorage.getItem('royalUserName');
-        socket.emit('redeemCoupon', { code: code, phone: currentPhone, name: currentName });
+        socket.emit('redeemCoupon', { code: code, phone: userPhone, name: userName });
     }
+    
     socket.on('couponResult', (data) => {
         if(data.status === 'success') { spawnGoldRain(); document.getElementById("coupon-code-input").value = ""; toggleModal('fundsModal', false); }
         alert(data.message);
     });
 
     function validateDeposit() { let inputField = document.getElementById("deposit-amount"); let val = parseInt(inputField.value); if (isNaN(val) || val < 100) val = 100; val = Math.round(val / 50) * 50; inputField.value = val; }
-    function showManualQRCode() { let amount = parseInt(document.getElementById("deposit-amount").value); validateDeposit(); document.getElementById("qr-dynamic-area").innerHTML = `<p style="color:#ffd700; margin:0;">SCAN QR & PAY EXACTLY: ₹${amount}</p><img src="qr.jpg" alt="UPI QR" style="width:180px; height:180px; border:3px solid var(--gold-royal); margin:5px auto; border-radius:10px;"><input type="number" id="utr-number-input" class="login-input" placeholder="Enter 12-Digit UTR Number" /><button class="hub-btn deposit-btn" onclick="submitUTR(${amount})">SUBMIT DEPOSIT REQUEST</button>`; }
-    function submitUTR(amount) { let utr = document.getElementById("utr-number-input").value; if(utr.trim().length !== 12) return alert("UTR must be 12 digits!"); socket.emit('submitManualDeposit', { amount: amount, utr: utr, phone: userPhone || localStorage.getItem('royalUserPhone') }); document.getElementById("qr-dynamic-area").innerHTML = `<h3 style="color:#ffd700;">VERIFICATION PENDING</h3>`; }
+    
+    // NEW UPI DEEP LINK SYSTEM 
+    function showManualQRCode() { 
+        let amount = parseInt(document.getElementById("deposit-amount").value); validateDeposit(); 
+        
+        // This generates the link that opens GPay/PhonePe directly
+        let upiLink = `upi://pay?pa=${MY_UPI_ID}&pn=RoyalCasino&am=${amount}&cu=INR`;
+
+        document.getElementById("qr-dynamic-area").innerHTML = `
+            <h3 style="color:#ffd700; margin-bottom:5px;">PAY ₹${amount}</h3>
+            <a href="${upiLink}" class="hub-btn deposit-btn" style="display:block; text-decoration:none; text-align:center; margin-bottom:15px; background: linear-gradient(90deg, #00c6ff, #0072ff); color:white; border:none;">🚀 PAY VIA UPI APP</a>
+            <p style="color:#aaa; font-size:11px; margin:0;">After paying, enter your 12-Digit UTR below:</p>
+            <input type="number" id="utr-number-input" class="login-input" placeholder="Enter 12-Digit UTR Number" />
+            <button class="hub-btn deposit-btn" onclick="submitUTR(${amount})">SUBMIT UTR</button>
+        `; 
+    }
+
+    function submitUTR(amount) { let utr = document.getElementById("utr-number-input").value; if(utr.trim().length !== 12) return alert("UTR must be 12 digits!"); socket.emit('submitManualDeposit', { amount: amount, utr: utr, phone: userPhone }); document.getElementById("qr-dynamic-area").innerHTML = `<h3 style="color:#ffd700;">VERIFICATION PENDING</h3>`; }
     socket.on('depositResult', (data) => { if(data.status === 'success') { alert(`🎉 EXCELLENT! ₹${data.amount} added.`); spawnGoldRain(); } else { alert("❌ PAYMENT REJECTED!"); } toggleModal('fundsModal', false); backToFundsMain(); });
     
-    function submitWithdrawal() { let amount = parseInt(document.getElementById("withdraw-amount").value); let upiId = document.getElementById("withdraw-upi").value; if (amount < 1000) return alert("Minimum withdrawal is ₹1000!"); if(upiId.trim() === "" || amount > currentBalance) return alert("Invalid details or balance!"); socket.emit('withdrawFunds', { amount: amount, upi: upiId, phone: userPhone || localStorage.getItem('royalUserPhone') }); alert("Withdrawal requested!"); toggleModal('fundsModal', false); backToFundsMain(); }
+    function submitWithdrawal() { let amount = parseInt(document.getElementById("withdraw-amount").value); let upiId = document.getElementById("withdraw-upi").value; if (amount < 1000) return alert("Minimum withdrawal is ₹1000!"); if(upiId.trim() === "" || amount > currentBalance) return alert("Invalid details or balance!"); socket.emit('withdrawFunds', { amount: amount, upi: upiId, phone: userPhone }); alert("Withdrawal requested!"); toggleModal('fundsModal', false); backToFundsMain(); }
 
     function validateWager() {
         let inputField = document.getElementById("wager-input"); let typedVal = parseInt(inputField.value);
@@ -362,12 +372,10 @@
         validateWager(); if(!lockedSide) return alert("Select side first!"); if(selectedWager > currentBalance) return alert("Insufficient balance!");
         playSound('click'); document.getElementById("toss-button").disabled = true; updateGuidance();
         document.getElementById("status-terminal").innerHTML = "SEARCHING GLOBAL LOBBY..."; document.getElementById("bot-name").innerHTML = "Searching..."; document.getElementById("bot-img").innerHTML = "⌛";
-        
-        let pPhone = userPhone || localStorage.getItem('royalUserPhone');
-        let pName = userName || localStorage.getItem('royalUserName');
-        socket.emit('placeBet', { side: lockedSide, amount: selectedWager, phone: pPhone, name: pName });
+        socket.emit('placeBet', { side: lockedSide, amount: selectedWager, phone: userPhone, name: userName });
     }
     
+    // Balance strictly synced from server
     socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); updateGuidance(); });
     socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
     socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; updateGuidance(); });
@@ -393,9 +401,9 @@
 
     // PVP & REMATCH ENGINE
     function openPvPMenu() { validateWager(); if(!lockedSide) return alert("Pehle HEADS ya TAILS select kijiye!"); if(selectedWager > currentBalance) return alert("Balance kam hai!"); document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
-    function createRoom() { socket.emit('createRoom', { amount: selectedWager, side: lockedSide, phone: userPhone || localStorage.getItem('royalUserPhone') }); }
+    function createRoom() { socket.emit('createRoom', { amount: selectedWager, side: lockedSide, phone: userPhone }); }
     socket.on('roomCreated', (data) => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerHTML = data.code; document.getElementById('room-wager-info').innerHTML = `Wager: ₹${data.wager} | Side: ${data.side.toUpperCase()}`; });
-    function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code, phone: userPhone || localStorage.getItem('royalUserPhone') }); } else { alert("Enter 4-Digit Code!"); } }
+    function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code, phone: userPhone }); } else { alert("Enter 4-Digit Code!"); } }
 
     function clickPvpPlayAgain() {
         if(currentBalance < 100) { alert("Insufficient Funds! Add money first."); toggleModal('pvpModal', false); toggleModal('fundsModal', true); return; }
