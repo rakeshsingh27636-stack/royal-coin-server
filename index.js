@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.static(__dirname));
 
 // ✅ 100% CORRECT MONGODB CONNECTION
-const dbURI = "mongodb+srv://royalcoin:db_Hemant321@cluster0.xdnwkjr.mongodb.net/royalcasino?retryWrites=true&w=majority";
+const dbURI = "mongodb+srv://royalcoin:Hemant321@cluster0.xdnwkjr.mongodb.net/royalcasino?retryWrites=true&w=majority";
 
 mongoose.connect(dbURI, { maxPoolSize: 10, serverSelectionTimeoutMS: 10000 })
 .then(() => console.log("✅ MongoDB Database Connected Successfully!"))
