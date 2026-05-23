@@ -113,6 +113,7 @@
     #login-screen { display: flex; z-index: 200; }
     .logo-coin { font-size: 60px; margin-bottom: 10px; animation: floatCoin 2s infinite alternate; }
     .note-text { color: #ff3366; font-size: 11px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;}
+    .lock-icon { font-size: 40px; margin-bottom: 15px; }
   </style>
 </head>
 <body>
@@ -123,16 +124,16 @@
     
     <div class="modal-overlay" id="login-screen">
       <div class="modal-card">
-        <div class="logo-coin">🪙</div>
+        <div class="logo-coin" id="login-icon">🪙</div>
         <h2 id="login-title">ROYAL CASINO</h2>
         <p id="login-subtitle" style="color:#bbb; font-size:12px; margin-bottom:20px;">Register to create your Wallet</p>
         
         <div class="modal-row">
-          <input type="text" id="user-name" class="login-input" placeholder="Enter Full Name" />
+          <input type="text" id="user-name" class="login-input" placeholder="Enter Nickname" />
           <input type="number" id="user-mobile" class="login-input" placeholder="Mobile Number" />
-          <button class="hub-btn deposit-btn" id="btn-login" onclick="startAppSession()">CREATE ID & PLAY</button>
+          <button class="hub-btn deposit-btn" id="btn-login" onclick="startAppSession()">CREATE ID & SECURE LOCK</button>
         </div>
-        <p class="note-text" id="login-error" style="display:none;">Please fill required fields!</p>
+        <p class="note-text" id="login-error" style="display:none;"></p>
       </div>
     </div>
 
@@ -257,36 +258,88 @@
     let currentBalance = 0; let selectedWager = 100; let lockedSide = null;
     let userName = ""; let userPhone = "";
 
+    // BIOMETRIC HELPER FUNCTIONS
+    function bufferEncode(value) { return btoa(String.fromCharCode.apply(null, new Uint8Array(value))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
+    function bufferDecode(value) { return Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)); }
+
     let savedName = localStorage.getItem('royalUserName');
     let savedPhone = localStorage.getItem('royalUserPhone');
+    let savedBioCred = localStorage.getItem('royalBioCred');
 
     window.onload = () => {
-        if(savedPhone) {
+        // Agar pehle se account bana hai
+        if(savedPhone && savedBioCred) {
             document.getElementById('user-name').style.display = 'none';
-            document.getElementById('login-title').innerText = "WELCOME BACK";
-            document.getElementById('login-subtitle').innerText = "Enter mobile number to login";
-            document.getElementById('btn-login').innerText = "SECURE LOGIN";
+            document.getElementById('user-mobile').style.display = 'none';
+            document.getElementById('login-icon').innerHTML = "🔒";
+            document.getElementById('login-icon').className = "lock-icon";
+            document.getElementById('login-title').innerText = "WALLET LOCKED";
+            document.getElementById('login-subtitle').innerText = "Welcome back, " + savedName;
+            document.getElementById('btn-login').innerText = "🔓 UNLOCK APP";
         }
     };
 
-    function startAppSession() {
+    async function startAppSession() {
         let nameInput = document.getElementById('user-name').value;
         let phoneInput = document.getElementById('user-mobile').value;
         let errorTxt = document.getElementById('login-error');
+        let btn = document.getElementById('btn-login');
 
-        if(savedPhone) {
-            if(phoneInput === savedPhone) {
+        // RETURNING USER (Unlock Flow)
+        if(savedPhone && savedBioCred) {
+            try {
+                btn.innerText = "VERIFYING...";
+                const publicKey = {
+                    challenge: crypto.getRandomValues(new Uint8Array(32)),
+                    allowCredentials: [{ id: bufferDecode(savedBioCred), type: 'public-key' }],
+                    userVerification: 'required',
+                    timeout: 60000
+                };
+                
+                // Ye line asli phone lock (Fingerprint/PIN) pop-up layegi
+                await navigator.credentials.get({ publicKey });
+                
+                // Pass hone par
                 userName = savedName; userPhone = savedPhone; finalizeLogin();
-            } else {
-                errorTxt.innerText = "Number not registered on this device!"; errorTxt.style.display = "block";
+            } catch(e) {
+                btn.innerText = "🔓 UNLOCK APP";
+                errorTxt.innerText = "Authentication Failed or Cancelled!"; errorTxt.style.display = "block";
             }
-        } else {
+        } 
+        // NEW USER (Registration Flow)
+        else {
             if(nameInput.trim() === "" || phoneInput.trim() === "") { 
                 errorTxt.innerText = "Please fill both fields!"; errorTxt.style.display = "block"; return; 
             }
-            localStorage.setItem('royalUserName', nameInput);
-            localStorage.setItem('royalUserPhone', phoneInput);
-            userName = nameInput; userPhone = phoneInput; finalizeLogin();
+            if(!window.PublicKeyCredential) {
+                // Agar bohot purana phone hai jo fingerprint support nahi karta
+                localStorage.setItem('royalUserName', nameInput); localStorage.setItem('royalUserPhone', phoneInput);
+                userName = nameInput; userPhone = phoneInput; finalizeLogin(); return;
+            }
+
+            try {
+                btn.innerText = "CREATING LOCK...";
+                const publicKey = {
+                    challenge: crypto.getRandomValues(new Uint8Array(32)),
+                    rp: { name: "Royal Casino", id: window.location.hostname },
+                    user: { id: crypto.getRandomValues(new Uint8Array(16)), name: nameInput, displayName: nameInput },
+                    pubKeyCredParams: [{alg: -7, type: "public-key"}, {alg: -257, type: "public-key"}],
+                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                    timeout: 60000,
+                    attestation: "none"
+                };
+                
+                // Ye pehli baar lock setup karne ko bolega
+                const cred = await navigator.credentials.create({ publicKey });
+                
+                localStorage.setItem('royalBioCred', bufferEncode(cred.rawId));
+                localStorage.setItem('royalUserName', nameInput);
+                localStorage.setItem('royalUserPhone', phoneInput);
+                userName = nameInput; userPhone = phoneInput; finalizeLogin();
+            } catch (e) {
+                btn.innerText = "CREATE ID & SECURE LOCK";
+                errorTxt.innerText = "Error: App secure karne ke liye Screen Lock setup karein!"; errorTxt.style.display = "block";
+            }
         }
     }
 
@@ -360,14 +413,13 @@
     function submitUTR(amount) {
         let utr = document.getElementById("utr-number-input").value;
         if(utr.trim().length !== 12) return alert("Error: UTR number exactly 12 digits ka hona chahiye!");
-        
         playSound('click');
         socket.emit('submitManualDeposit', { amount: amount, utr: utr });
         
         document.getElementById("qr-dynamic-area").innerHTML = `
             <div style="font-size:40px; margin-top:10px;">⏳</div>
             <h3 style="color:#ffd700; margin:5px 0;">VERIFICATION PENDING</h3>
-            <p style="color:#bbb; font-size:12px;">Admin aapke UTR (${utr}) ko verify kar raha hai. Kripya 2-5 minute wait karein...</p>
+            <p style="color:#bbb; font-size:12px;">Admin aapke UTR (${utr}) ko verify kar raha hai. Kripya wait karein...</p>
         `;
     }
 
@@ -389,7 +441,7 @@
         if(amount > currentBalance) return alert("Insufficient Winnings!");
         playSound('click');
         socket.emit('withdrawFunds', { amount: amount, upi: upiId });
-        alert(`Request Submitted!\n₹${amount} will be credited to ${upiId} within 24 hours.`);
+        alert(`Request Submitted!\n₹${amount} will be credited to ${upiId} after admin approval.`);
         toggleModal('fundsModal', false); backToFundsMain();
     }
 
