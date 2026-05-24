@@ -16,13 +16,24 @@ mongoose.connect(dbURI, { maxPoolSize: 10, serverSelectionTimeoutMS: 10000 })
 .then(() => console.log("✅ MongoDB Database Connected Successfully!"))
 .catch((err) => console.log("❌ Database Connection Error: ", err));
 
+// ✅ NAYA TRANSACTION SCHEMA ADD KIYA GAYA HAI
+const txSchema = new mongoose.Schema({
+    txId: String,
+    type: String, 
+    amount: Number,
+    status: { type: String, default: 'Processing ⏳' }, 
+    detail: String, 
+    date: { type: String }
+});
+
 const playerSchema = new mongoose.Schema({
     name: String,
     phone: { type: String, unique: true },
     balance: { type: Number, default: 0 },
     matchesPlayed: { type: Number, default: 0 },
     totalWon: { type: Number, default: 0 },
-    totalLost: { type: Number, default: 0 }
+    totalLost: { type: Number, default: 0 },
+    transactions: [txSchema] // User ki history yahan save hogi
 });
 const Player = mongoose.model('Player', playerSchema);
 
@@ -108,7 +119,6 @@ let pendingWithdrawals = {};
 let rooms = {};
 let adminSocketId = null;
 
-// ✅ 1000+ REALISTIC NAMES GENERATOR
 const firstNames = ["Rahul", "Vikram", "Aarav", "Priya", "Neha", "Kabir", "Amit", "Raj", "Karan", "Rohan", "Anjali", "Ravi", "Suresh", "Ramesh", "Sunil", "Vikas", "Pooja", "Kavita", "Sanjay", "Ajay", "Vijay", "Anita", "Sunita", "Deepak", "Manoj", "Anil", "Mukesh", "Dinesh", "Gaurav", "Saurabh", "Ashish", "Manish", "Nitin", "Sachin", "Vishal", "Yogesh", "Pankaj", "Tarun", "Varun", "Arun", "Akash", "Rishabh", "Shubham", "Abhishek", "Aditya", "Nikhil", "Prashant", "Sumit", "Mohit", "Rohit"];
 const tags = ["_Pro", "_King", "_Ace", "_777", "_007", "_Win", "_Casino", "_HighRoller", "_Bet", "_Spins", "_99", "_Master", "_Gamer", "_Vip", "_Boss", "_Lucky", "_Don", "_Shark", "_Star", "_Ninja"];
 let fakeRealNames = [];
@@ -121,8 +131,13 @@ setInterval(() => {
 async function getAndUpdateUser(phone, name) {
     if(!phone) return null;
     let u = await Player.findOne({ phone: phone });
-    if(!u) { u = new Player({ name: name || "Player", phone: phone, balance: 0, totalLost: 0 }); await u.save(); }
+    if(!u) { u = new Player({ name: name || "Player", phone: phone, balance: 0, totalLost: 0, transactions: [] }); await u.save(); }
     return u;
+}
+
+function getFormattedDate() {
+    const d = new Date();
+    return d.toLocaleDateString('en-IN') + ' ' + d.toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'});
 }
 
 io.on('connection', (socket) => {
@@ -139,78 +154,136 @@ io.on('connection', (socket) => {
         let user = await getAndUpdateUser(data.phone, data.name);
         if(user) {
             socket.emit('updateBalance', { newBalance: user.balance });
+            socket.emit('updateHistory', user.transactions); // ✅ Load history on connect
             if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
         }
     });
 
+    // Fetch History manual request
+    socket.on('fetchHistory', async (data) => {
+        if(!data.phone) return;
+        let user = await Player.findOne({ phone: data.phone });
+        if(user) socket.emit('updateHistory', user.transactions.reverse()); // latest first
+    });
+
+    // 📥 MANUAL DEPOSIT WITH HISTORY RECORD
+    socket.on('submitManualDeposit', async (data) => { 
+        if(!data.phone) return;
+        let u = await getAndUpdateUser(data.phone, "Player");
+        if(u) {
+            let txId = "DEP" + Math.floor(100000 + Math.random() * 900000);
+            u.transactions.push({ txId: txId, type: 'Deposit', amount: data.amount, status: 'Processing ⏳', detail: 'UTR: ' + data.utr, date: getFormattedDate() });
+            await u.save();
+
+            pendingDeposits[txId] = { name: u.name, phone: u.phone, amount: data.amount, utr: data.utr, dbId: u._id, requestSocket: socket.id }; 
+            
+            socket.emit('updateHistory', u.transactions.reverse());
+            if(adminSocketId) io.to(adminSocketId).emit('adminViewRequests', pendingDeposits); 
+        }
+    });
+    
+    // ADMIN ACTION ON DEPOSIT
+    socket.on('adminDepAction', async (data) => {
+        if(socket.id !== adminSocketId) return;
+        const dep = pendingDeposits[data.requestId];
+        if(dep) {
+            let u = await Player.findById(dep.dbId);
+            if(u) {
+                // Find transaction and update
+                let tx = u.transactions.find(t => t.txId === data.requestId);
+                if (tx) tx.status = (data.action === 'approve') ? 'Success ✅' : 'Rejected ❌';
+
+                if(data.action === 'approve') u.balance += parseInt(dep.amount);
+                await u.save();
+
+                io.to(dep.requestSocket).emit('updateBalance', { newBalance: u.balance });
+                io.to(dep.requestSocket).emit('updateHistory', u.transactions.reverse());
+                if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
+            }
+        }
+        delete pendingDeposits[data.requestId]; socket.emit('adminViewRequests', pendingDeposits);
+    });
+
+    // 📤 WITHDRAWAL WITH HISTORY RECORD
+    socket.on('withdrawFunds', async (data) => {
+        if(!data.phone) return;
+        let u = await getAndUpdateUser(data.phone, "Player");
+        if(u && u.balance >= data.amount) {
+            u.balance -= data.amount; // Deduct immediately
+            
+            let txId = "WIT" + Math.floor(100000 + Math.random() * 900000);
+            u.transactions.push({ txId: txId, type: 'Withdraw', amount: data.amount, status: 'Processing ⏳', detail: 'UPI: ' + data.upi, date: getFormattedDate() });
+            await u.save();
+
+            socket.emit('updateBalance', { newBalance: u.balance });
+            socket.emit('updateHistory', u.transactions.reverse());
+            
+            pendingWithdrawals[txId] = { name: u.name, phone: u.phone, amount: data.amount, upi: data.upi, dbId: u._id, requestSocket: socket.id };
+            if(adminSocketId) io.to(adminSocketId).emit('adminViewWithdrawals', pendingWithdrawals);
+        }
+    });
+    
+    // ADMIN ACTION ON WITHDRAW
+    socket.on('adminWithAction', async (data) => {
+        if(socket.id !== adminSocketId) return;
+        const wit = pendingWithdrawals[data.requestId];
+        if(wit) {
+            let u = await Player.findById(wit.dbId);
+            if(u) {
+                let tx = u.transactions.find(t => t.txId === data.requestId);
+                if (tx) tx.status = (data.action === 'approve') ? 'Success ✅' : 'Rejected ❌ (Refunded)';
+
+                if(data.action === 'reject') { u.balance += parseInt(wit.amount); } // Refund if rejected
+                await u.save();
+
+                io.to(wit.requestSocket).emit('updateBalance', { newBalance: u.balance });
+                io.to(wit.requestSocket).emit('updateHistory', u.transactions.reverse());
+            }
+        }
+        delete pendingWithdrawals[data.requestId]; socket.emit('adminViewWithdrawals', pendingWithdrawals);
+        if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
+    });
+
+    // 🚫 USER CANCELLING WITHDRAWAL
+    socket.on('cancelWithdrawal', async (data) => {
+        if(!data.phone) return;
+        let u = await Player.findOne({ phone: data.phone });
+        if(u) {
+            let tx = u.transactions.find(t => t.txId === data.txId);
+            if(tx && tx.status === 'Processing ⏳' && tx.type === 'Withdraw') {
+                tx.status = 'Cancelled 🚫 (Refunded)';
+                u.balance += tx.amount; // Refund balance
+                await u.save();
+                
+                // Remove from admin pending list
+                delete pendingWithdrawals[data.txId];
+                if(adminSocketId) io.to(adminSocketId).emit('adminViewWithdrawals', pendingWithdrawals);
+                
+                socket.emit('updateBalance', { newBalance: u.balance });
+                socket.emit('updateHistory', u.transactions.reverse());
+            }
+        }
+    });
+
+    // 🎁 COUPON LOGIC
     socket.on('redeemCoupon', async (data) => {
         if(!data.phone) return socket.emit('couponResult', { status: 'error', message: '❌ Invalid Session! Please refresh the page.' });
         if(data.code === 'ROYAL20K') {
             let user = await getAndUpdateUser(data.phone, data.name);
             if(user) {
                 user.balance += 20000; 
+                let txId = "BONUS" + Math.floor(1000 + Math.random() * 9000);
+                user.transactions.push({ txId: txId, type: 'Coupon', amount: 20000, status: 'Success ✅', detail: 'Code: ROYAL20K', date: getFormattedDate() });
                 await user.save();
+                
                 socket.emit('updateBalance', { newBalance: user.balance });
+                socket.emit('updateHistory', user.transactions.reverse());
                 socket.emit('couponResult', { status: 'success', message: '🎉 EXCELLENT! Special Coupon Code Applied. ₹20,000 cash balance added to your wallet!' });
                 if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
             }
         } else {
             socket.emit('couponResult', { status: 'error', message: '❌ Invalid Coupon Code! Please try again.' });
         }
-    });
-
-    socket.on('submitManualDeposit', async (data) => { 
-        if(!data.phone) return;
-        let u = await getAndUpdateUser(data.phone, "Player");
-        if(u) {
-            pendingDeposits[socket.id] = { name: u.name, phone: u.phone, amount: data.amount, utr: data.utr, dbId: u._id }; 
-            if(adminSocketId) io.to(adminSocketId).emit('adminViewRequests', pendingDeposits); 
-        }
-    });
-    
-    socket.on('adminDepAction', async (data) => {
-        if(socket.id !== adminSocketId) return;
-        const dep = pendingDeposits[data.requestId];
-        if(dep && data.action === 'approve') {
-            let u = await Player.findById(dep.dbId);
-            if(u) {
-                u.balance += parseInt(dep.amount);
-                await u.save();
-                io.to(data.requestId).emit('updateBalance', { newBalance: u.balance });
-                io.to(data.requestId).emit('depositResult', { status: 'success', amount: dep.amount });
-                if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
-            }
-        } else if (dep) { 
-            io.to(data.requestId).emit('depositResult', { status: 'failed' }); 
-        }
-        delete pendingDeposits[data.requestId]; socket.emit('adminViewRequests', pendingDeposits);
-    });
-
-    socket.on('withdrawFunds', async (data) => {
-        if(!data.phone) return;
-        let u = await getAndUpdateUser(data.phone, "Player");
-        if(u && u.balance >= data.amount) {
-            u.balance -= data.amount;
-            await u.save();
-            socket.emit('updateBalance', { newBalance: u.balance });
-            pendingWithdrawals[socket.id] = { name: u.name, phone: u.phone, amount: data.amount, upi: data.upi, dbId: u._id };
-            if(adminSocketId) io.to(adminSocketId).emit('adminViewWithdrawals', pendingWithdrawals);
-        }
-    });
-    
-    socket.on('adminWithAction', async (data) => {
-        if(socket.id !== adminSocketId) return;
-        const wit = pendingWithdrawals[data.requestId];
-        if(wit && data.action === 'reject') {
-            let u = await Player.findById(wit.dbId);
-            if(u) {
-                u.balance += parseInt(wit.amount);
-                await u.save();
-                io.to(data.requestId).emit('updateBalance', { newBalance: u.balance });
-            }
-        }
-        delete pendingWithdrawals[data.requestId]; socket.emit('adminViewWithdrawals', pendingWithdrawals);
-        if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
     });
 
     // 🎲 GLOBAL MATCH TOSS (With Timings & 65% House Edge)
@@ -223,44 +296,29 @@ io.on('connection', (socket) => {
         await u.save();
         socket.emit('updateBalance', { newBalance: u.balance }); 
 
-        // ✅ MATCHMAKING DELAY (3.5 Seconds)
         setTimeout(() => {
             let randomOpponent = fakeRealNames[Math.floor(Math.random() * fakeRealNames.length)];
             socket.emit('matchmakingStarted', { bot: { name: randomOpponent, avatar: "😎" } });
             
-            // ✅ COIN FLIP DURATION (5 Seconds)
             setTimeout(async () => {
                 let freshU = await Player.findById(u._id);
                 if(!freshU) return;
 
-                // ✅ 65% BOT WIN LOGIC (HOUSE EDGE)
                 let sideRes;
-                const rand = Math.random(); // 0 to 0.99
-                
-                if (rand < 0.65) { 
-                    // 65% Chance: Bot jeetega (Result user ki choice ka ulta aayega)
-                    sideRes = (data.side === 'heads') ? 'tails' : 'heads';
-                } else { 
-                    // 35% Chance: User jeetega
-                    sideRes = data.side;
-                }
+                const rand = Math.random(); 
+                if (rand < 0.65) { sideRes = (data.side === 'heads') ? 'tails' : 'heads'; } 
+                else { sideRes = data.side; }
 
                 let status = (sideRes === data.side) ? 'won' : 'lost';
-                
                 freshU.matchesPlayed += 1;
-                if(status === 'won') { 
-                    freshU.balance += (data.amount * 2); 
-                    freshU.totalWon += data.amount;
-                } else {
-                    freshU.totalLost += data.amount;
-                }
+                if(status === 'won') { freshU.balance += (data.amount * 2); freshU.totalWon += data.amount; } 
+                else { freshU.totalLost += data.amount; }
                 
                 await freshU.save();
                 socket.emit('updateBalance', { newBalance: freshU.balance }); 
                 socket.emit('gameResult', { tossResult: sideRes, status: status, newBalance: freshU.balance, isPvp: false });
                 if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
             }, 5000); 
-
         }, 3500); 
     });
 
@@ -313,7 +371,6 @@ io.on('connection', (socket) => {
 
         io.to(roomCode).emit('pvpRematchMatchStarted', { message: "Coin In The Air! Tossing..." });
 
-        // ✅ PVP COIN FLIP DURATION (5 Seconds)
         setTimeout(async () => {
             let hFresh = await Player.findById(hostDb._id);
             let gFresh = await Player.findById(guestDb._id);
@@ -367,11 +424,7 @@ io.on('connection', (socket) => {
         let code = players[socket.id] ? players[socket.id].currentRoom : null; if(code && rooms[code]) { io.to(code).emit('pvpRoomClosedNotify', 'Lobby closed.'); delete rooms[code]; }
     });
 
-    socket.on('disconnect', () => { 
-        delete players[socket.id]; 
-        if(pendingDeposits[socket.id]) { delete pendingDeposits[socket.id]; if(adminSocketId) io.to(adminSocketId).emit('adminViewRequests', pendingDeposits); }
-        if(pendingWithdrawals[socket.id]) { delete pendingWithdrawals[socket.id]; if(adminSocketId) io.to(adminSocketId).emit('adminViewWithdrawals', pendingWithdrawals); }
-    });
+    socket.on('disconnect', () => { delete players[socket.id]; });
 });
 
 const PORT = process.env.PORT || 3000;

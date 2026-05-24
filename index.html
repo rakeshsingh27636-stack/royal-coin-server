@@ -65,9 +65,17 @@
     .hub-btn { padding: 14px; border: 1px solid #fff; border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
     .deposit-btn { background: linear-gradient(90deg, #00b4db, #00ff99); color: #000; text-decoration: none;}
     .withdraw-btn { background: linear-gradient(90deg, #ff416c, #ff4b2b); color: #fff;}
+    .history-btn { background: linear-gradient(90deg, #333, #555); color: #ffd700; border: 1px solid #ffd700; }
     .close-modal { color: var(--gold-royal); font-size: 12px; margin-top: 20px; cursor: pointer; text-decoration: underline; text-transform: uppercase;}
     .login-input { padding: 12px; background: #000; border: 1px solid var(--gold-royal); color: var(--gold-royal); font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: bold; text-align: center; border-radius: 5px; width: 90%; margin: 0 auto; outline: none; }
     .lock-icon { font-size: 40px; margin-bottom: 15px; }
+
+    /* TX HISTORY STYLES */
+    .tx-item { background: #250006; border: 1px solid var(--gold-dark); border-radius: 8px; padding: 12px; margin-bottom: 10px; text-align: left; }
+    .tx-header { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;}
+    .tx-date { font-size: 10px; color: #aaa; }
+    .tx-stat { font-size: 12px; font-weight: bold; margin-top: 5px;}
+    .cancel-tx-btn { background: #ff3366; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-family: 'Montserrat'; font-size: 10px; font-weight: bold; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -95,8 +103,9 @@
         <h2>ROYAL WALLET</h2>
         <p style="color: #bbb; font-size: 13px; margin: 5px 0 0 0; font-family: 'Montserrat', sans-serif;">Add or Cashout Real Money</p>
         <div class="modal-row">
-          <button class="hub-btn deposit-btn" onclick="openDeposit()">📥 Add Funds (Deposit)</button>
-          <button class="hub-btn withdraw-btn" onclick="openWithdraw()">📤 Withdraw to Bank</button>
+          <button class="hub-btn deposit-btn" onclick="openDeposit()">📥 Add Funds</button>
+          <button class="hub-btn withdraw-btn" onclick="openWithdraw()">📤 Withdraw</button>
+          <button class="hub-btn history-btn" onclick="openHistory()">📜 TXN HISTORY</button>
         </div>
         
         <div style="margin-top: 25px; border-top: 1px dashed var(--gold-royal); padding-top: 15px;">
@@ -126,6 +135,15 @@
         <p style="color: #ff3366; font-size: 12px; margin-top: 12px; font-weight: bold; text-shadow: 0 0 5px rgba(255,0,0,0.3);">NOTE: Minimum withdrawal amount should be 1000 or above.</p>
         <div class="close-modal" onclick="backToFundsMain()">Back</div>
       </div>
+
+      <div class="modal-card" id="history-screen" style="display:none;">
+        <h2>TRANSACTION HISTORY</h2>
+        <div id="history-list" style="margin-top: 15px; max-height: 350px; overflow-y: auto;">
+            <p style="color:#aaa; font-size: 12px;">Loading records...</p>
+        </div>
+        <div class="close-modal" onclick="backToFundsMain()">Back</div>
+      </div>
+
     </div>
 
     <div class="modal-overlay" id="pvpModal">
@@ -244,6 +262,7 @@
     let userPhone = localStorage.getItem('royalUserPhone') || ""; 
     let savedBioCred = localStorage.getItem('royalBioCred');
     let rematchSide = null;
+    let userTxHistory = [];
 
     const MY_UPI_ID = "royalcasino@ybl"; 
 
@@ -338,14 +357,68 @@
     function updateGoldRain() { ctx.clearRect(0, 0, canvas.width, canvas.height); let active = false; particles.forEach(p => { p.y += p.speedY; p.tilt += p.tiltSpeed; ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, Math.abs(Math.sin(p.tilt))); ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 2 * Math.PI); let grad = ctx.createLinearGradient(-p.r, -p.r, p.r, p.r); grad.addColorStop(0, "#fffde7"); grad.addColorStop(0.3, "#ffd700"); grad.addColorStop(1, "#b8860b"); ctx.fillStyle = grad; ctx.fill(); ctx.restore(); if(p.y < canvas.height + 50) active = true; }); if(active) requestAnimationFrame(updateGoldRain); }
 
     function toggleModal(id, show) { playSound('click'); document.getElementById(id).style.display = show ? "flex" : "none"; updateGuidance(); }
+    
     function backToFundsMain() { 
         document.getElementById("funds-main").style.display = "block"; 
         document.getElementById("deposit-screen").style.display = "none"; 
         document.getElementById("withdraw-screen").style.display = "none"; 
+        document.getElementById("history-screen").style.display = "none";
         document.getElementById("qr-dynamic-area").innerHTML = `<input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" onblur="validateDeposit()"/><button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI LINK</button>`; 
     }
+    
     function openDeposit() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("deposit-screen").style.display = "block"; }
     function openWithdraw() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("withdraw-screen").style.display = "block"; }
+    function openHistory() { 
+        playSound('click'); 
+        document.getElementById("funds-main").style.display = "none"; 
+        document.getElementById("history-screen").style.display = "block";
+        socket.emit('fetchHistory', { phone: userPhone });
+    }
+
+    // ✅ Render History Engine
+    socket.on('updateHistory', (txList) => {
+        userTxHistory = txList;
+        const listDiv = document.getElementById("history-list");
+        listDiv.innerHTML = "";
+        if(txList.length === 0) {
+            listDiv.innerHTML = "<p style='color:#aaa; font-size:12px;'>No transactions yet.</p>";
+            return;
+        }
+
+        txList.forEach(tx => {
+            let color = "#aaa";
+            if(tx.status.includes("Success")) color = "#00ff99";
+            if(tx.status.includes("Rejected") || tx.status.includes("Cancelled")) color = "#ff3366";
+            if(tx.status.includes("Processing")) color = "#ffd700";
+
+            let typeColor = tx.type === "Withdraw" ? "#ff4b2b" : "#00b4db";
+
+            let cancelBtnHtml = "";
+            if(tx.type === "Withdraw" && tx.status.includes("Processing")) {
+                cancelBtnHtml = `<button class="cancel-tx-btn" onclick="cancelWithdrawReq('${tx.txId}')">CANCEL & REFUND</button>`;
+            }
+
+            listDiv.innerHTML += `
+                <div class="tx-item">
+                    <div class="tx-header">
+                        <strong style="color:${typeColor};">${tx.type}</strong>
+                        <strong style="color:var(--gold-royal);">₹${tx.amount}</strong>
+                    </div>
+                    <div class="tx-date">${tx.date} | ${tx.detail}</div>
+                    <div class="tx-stat" style="color:${color};">${tx.status}</div>
+                    ${cancelBtnHtml}
+                </div>
+            `;
+        });
+    });
+
+    function cancelWithdrawReq(txId) {
+        if(confirm("Are you sure you want to cancel this withdrawal? Funds will be returned to your wallet immediately.")) {
+            playSound('click');
+            socket.emit('cancelWithdrawal', { phone: userPhone, txId: txId });
+            alert("Withdrawal Cancelled! Amount refunded to wallet.");
+        }
+    }
 
     function submitCoupon() {
         let code = document.getElementById("coupon-code-input").value.trim().toUpperCase();
@@ -385,10 +458,31 @@
         `; 
     }
 
-    function submitUTR(amount) { let utr = document.getElementById("utr-number-input").value; if(utr.trim().length !== 12) return alert("UTR must be 12 digits!"); socket.emit('submitManualDeposit', { amount: amount, utr: utr, phone: userPhone }); document.getElementById("qr-dynamic-area").innerHTML = `<h3 style="color:#ffd700; font-family:'Cinzel';">VERIFICATION PENDING</h3>`; }
-    socket.on('depositResult', (data) => { if(data.status === 'success') { alert(`🎉 EXCELLENT! ₹${data.amount} added.`); spawnGoldRain(); } else { alert("❌ PAYMENT REJECTED!"); } toggleModal('fundsModal', false); backToFundsMain(); });
-    
-    function submitWithdrawal() { let amount = parseInt(document.getElementById("withdraw-amount").value); let upiId = document.getElementById("withdraw-upi").value; if (isNaN(amount) || amount < 1000) return alert("Minimum withdrawal is ₹1000!"); if(upiId.trim() === "" || amount > currentBalance) return alert("Invalid details or balance!"); socket.emit('withdrawFunds', { amount: amount, upi: upiId, phone: userPhone }); alert("Withdrawal requested!"); toggleModal('fundsModal', false); backToFundsMain(); }
+    function submitUTR(amount) { 
+        let utr = document.getElementById("utr-number-input").value; 
+        if(utr.trim().length !== 12) return alert("UTR must be 12 digits!"); 
+        
+        socket.emit('submitManualDeposit', { amount: amount, utr: utr, phone: userPhone }); 
+        
+        // ✅ Auto-Redirect to History & Show premium note
+        alert("Request Submitted! Your request is in progress, please wait some time.");
+        document.getElementById("deposit-screen").style.display = "none";
+        document.getElementById("history-screen").style.display = "block";
+    }
+
+    function submitWithdrawal() { 
+        let amount = parseInt(document.getElementById("withdraw-amount").value); 
+        let upiId = document.getElementById("withdraw-upi").value; 
+        
+        if (isNaN(amount) || amount < 1000) return alert("Minimum withdrawal is ₹1000!"); 
+        if(upiId.trim() === "" || amount > currentBalance) return alert("Invalid details or balance!"); 
+        
+        socket.emit('withdrawFunds', { amount: amount, upi: upiId, phone: userPhone }); 
+        
+        alert("Withdrawal Requested! Your request is in progress, please wait some time."); 
+        document.getElementById("withdraw-screen").style.display = "none";
+        document.getElementById("history-screen").style.display = "block";
+    }
 
     function validateWager() {
         let inputField = document.getElementById("wager-input"); let typedVal = parseInt(inputField.value);
@@ -404,7 +498,6 @@
         validateWager(); if(!lockedSide) return alert("Select side first!"); if(selectedWager > currentBalance) return alert("Insufficient balance!");
         playSound('click'); 
         
-        // UI LOCKS TO PREVENT SPAMMING
         document.getElementById("toss-button").disabled = true; 
         document.getElementById("pvp-main-btn").style.pointerEvents = "none";
         
@@ -417,18 +510,16 @@
     socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
     socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; document.getElementById("pvp-main-btn").style.pointerEvents = "auto"; updateGuidance(); });
 
-    // ✅ 5 SECOND MATCHMAKING ANIMATION
     socket.on('matchmakingStarted', (data) => { 
         document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; 
         document.getElementById("bot-name").innerHTML = data.bot.name; 
         document.getElementById("bot-img").innerHTML = data.bot.avatar; 
         let flipAudioInterval = setInterval(() => { playSound('flip'); }, 140); 
-        setTimeout(() => { clearInterval(flipAudioInterval); }, 5000); // Wait 5 seconds
+        setTimeout(() => { clearInterval(flipAudioInterval); }, 5000); 
         document.getElementById("status-terminal").innerHTML = "TOSSING!"; 
         document.getElementById("coin-object").className = "coin flipping"; 
     });
     
-    // ✅ 3 SECOND WAITING COOLDOWN IMPLEMENTATION
     socket.on('gameResult', (data) => {
         const coin = document.getElementById("coin-object");
         coin.className = data.tossResult === 'heads' ? "coin coin-stop-heads" : "coin coin-stop-tails";
@@ -438,7 +529,6 @@
             else { playSound('loss'); document.getElementById("status-terminal").className = "result-panel loss"; }
             document.getElementById("status-terminal").innerHTML = `${data.status.toUpperCase()}! Result: ${data.tossResult.toUpperCase()}`;
 
-            // Cooldown Stage
             setTimeout(() => {
                 document.getElementById("status-terminal").className = "result-panel";
                 document.getElementById("status-terminal").innerHTML = "⏳ WAITING... NEXT ROUND IN 3s";
@@ -448,7 +538,6 @@
                     document.getElementById("bot-name").innerHTML = "SYS.SCAN...";
                     document.getElementById("bot-img").innerHTML = "🤖";
                     
-                    // RE-ENABLE BUTTONS
                     document.getElementById("toss-button").disabled = false; 
                     document.getElementById("pvp-main-btn").style.pointerEvents = "auto";
                     updateGuidance();
@@ -458,11 +547,11 @@
                         document.getElementById('pvp-match-result-text').innerText = data.status === 'won' ? "🎉 YOU WON DOUBLE POT!" : "😢 YOU LOST THIS ROUND!";
                         document.getElementById('pvp-post-match').style.display = "block"; toggleModal('pvpModal', true);
                     }
-                }, 3000); // 3 seconds total wait time
+                }, 3000); 
 
-            }, 1500); // show result text for 1.5s before showing wait message
+            }, 1500); 
 
-        }, 600); // coin drop animation duration
+        }, 600); 
     });
 
     function openPvPMenu() { validateWager(); if(!lockedSide) return alert("Pehle HEADS ya TAILS select kijiye!"); if(selectedWager > currentBalance) return alert("Balance kam hai!"); document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
@@ -515,7 +604,6 @@
         playSound('click'); socket.emit('pvpSubmitRematchChoices', { wager: wager, side: rematchSide }); toggleModal('pvpModal', false);
     }
     
-    // ✅ 5 SECOND PVP ANIMATION
     socket.on('pvpRematchMatchStarted', (data) => { 
         toggleModal('pvpModal', false); 
         document.getElementById("status-terminal").className = "result-panel"; 
