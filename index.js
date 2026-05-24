@@ -213,7 +213,7 @@ io.on('connection', (socket) => {
         if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
     });
 
-    // 🎲 GLOBAL MATCH TOSS (With Timings)
+    // 🎲 GLOBAL MATCH TOSS (With Timings & 70% House Edge)
     socket.on('placeBet', async (data) => {
         if(!data.phone) return socket.emit('error', { message: 'Session Error! Refresh page.' });
         let u = await getAndUpdateUser(data.phone, data.name);
@@ -233,14 +233,24 @@ io.on('connection', (socket) => {
                 let freshU = await Player.findById(u._id);
                 if(!freshU) return;
 
-                const sideRes = Math.random() < 0.5 ? 'heads' : 'tails';
-                let status = 'lost';
+                // ✅ 70% BOT WIN LOGIC (HOUSE EDGE)
+                let sideRes;
+                const rand = Math.random(); // 0 to 0.99
+                
+                if (rand < 0.70) { 
+                    // 70% Chance: Bot jeetega (Result user ki choice ka ulta aayega)
+                    sideRes = (data.side === 'heads') ? 'tails' : 'heads';
+                } else { 
+                    // 30% Chance: User jeetega
+                    sideRes = data.side;
+                }
+
+                let status = (sideRes === data.side) ? 'won' : 'lost';
                 
                 freshU.matchesPlayed += 1;
-                if(sideRes === data.side) { 
+                if(status === 'won') { 
                     freshU.balance += (data.amount * 2); 
                     freshU.totalWon += data.amount;
-                    status = 'won'; 
                 } else {
                     freshU.totalLost += data.amount;
                 }
