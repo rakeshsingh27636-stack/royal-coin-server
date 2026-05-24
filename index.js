@@ -108,9 +108,11 @@ let pendingWithdrawals = {};
 let rooms = {};
 let adminSocketId = null;
 
+// Ticker with real names
+const fakeRealNames = ["Vikram_777", "Aarav_Pro", "Rahul_King", "Raj_HighRoller", "Amit_Casino", "Neha_Spins", "Priya_Win", "Kabir_Ace", "Lucky_Karan", "Rohan_Bet", "Anjali_007", "Ravi_Strike"];
+
 setInterval(() => {
-    const bots = ["CryptoKing", "LuckySpinner", "RajaBet", "CoinMaster"];
-    io.emit('liveTickerUpdate', { text: `🔥 ${bots[Math.floor(Math.random()*bots.length)]} won ₹${Math.floor(Math.random()*4500)+500}!` });
+    io.emit('liveTickerUpdate', { text: `🔥 ${fakeRealNames[Math.floor(Math.random()*fakeRealNames.length)]} won ₹${Math.floor(Math.random()*4500)+500}!` });
 }, 3500);
 
 async function getAndUpdateUser(phone, name) {
@@ -208,7 +210,7 @@ io.on('connection', (socket) => {
         if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
     });
 
-    // 🎲 GLOBAL MATCH TOSS (Balance Auto-update fix)
+    // 🎲 GLOBAL MATCH TOSS
     socket.on('placeBet', async (data) => {
         if(!data.phone) return socket.emit('error', { message: 'Session Error! Refresh page.' });
         let u = await getAndUpdateUser(data.phone, data.name);
@@ -216,10 +218,11 @@ io.on('connection', (socket) => {
         
         u.balance -= data.amount;
         await u.save();
-        socket.emit('updateBalance', { newBalance: u.balance }); // Client screen balance deduction balance bar update
+        socket.emit('updateBalance', { newBalance: u.balance }); 
 
-        const bots = ["CryptoKing", "LuckySpinner", "RajaBet", "CoinMaster"];
-        socket.emit('matchmakingStarted', { bot: { name: bots[Math.floor(Math.random()*bots.length)], avatar: "🤖" } });
+        // Generating a random real-sounding opponent name
+        let randomOpponent = fakeRealNames[Math.floor(Math.random() * fakeRealNames.length)];
+        socket.emit('matchmakingStarted', { bot: { name: randomOpponent, avatar: "😎" } });
         
         setTimeout(async () => {
             let freshU = await Player.findById(u._id);
@@ -238,7 +241,7 @@ io.on('connection', (socket) => {
             }
             
             await freshU.save();
-            socket.emit('updateBalance', { newBalance: freshU.balance }); // ✅ AUTO-UPDATE TRIGGER FIXED YAHAN HAI
+            socket.emit('updateBalance', { newBalance: freshU.balance }); 
             socket.emit('gameResult', { tossResult: sideRes, status: status, newBalance: freshU.balance, isPvp: false });
             if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
         }, 2500);
@@ -268,11 +271,9 @@ io.on('connection', (socket) => {
         players[socket.id].currentRoom = data.code; 
         socket.join(data.code);
         
-        // ✅ POP-UP ADDED FOR GUEST TO ACCEPT INITIAL BET TERMS
         socket.emit('pvpShowChallengePop', { wager: room.wager, side: room.selectorSide });
     });
 
-    // Triggered when any player accepts the challenge sheet details
     socket.on('pvpAcceptChallenge', () => {
         let code = players[socket.id] ? players[socket.id].currentRoom : null;
         if(code && rooms[code]) executePvpToss(code);
@@ -340,7 +341,6 @@ io.on('connection', (socket) => {
         let code = players[socket.id] ? players[socket.id].currentRoom : null; let room = rooms[code]; if(!room) return;
         room.wager = parseInt(data.wager); room.selectorSide = data.side; 
         
-        // ✅ REMATCH SELECTION POPUP ROUTING TO THE OTHER USER
         let targetId = (socket.id === room.host) ? room.guest : room.host;
         io.to(targetId).emit('pvpShowChallengePop', { wager: room.wager, side: room.selectorSide });
     });
