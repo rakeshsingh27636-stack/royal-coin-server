@@ -9,8 +9,8 @@ const app = express();
 app.use(cors());
 app.use(express.static(__dirname));
 
-// ✅ 100% CORRECT MONGODB CONNECTION
-const dbURI = process.env.MONGODB_URI || "mongodb+srv://royalcoin:Hemant321@cluster0.xdnwkjr.mongodb.net/royalcasino?retryWrites=true&w=majority";
+// ✅ NAYA DATABASE CONNECTION (Ab koi error nahi aayega)
+const dbURI = "mongodb+srv://royaladmin:royal123@cluster0.xdnwkjr.mongodb.net/royalcasino?retryWrites=true&w=majority";
 
 mongoose.connect(dbURI, { maxPoolSize: 10, serverSelectionTimeoutMS: 10000 })
 .then(() => console.log("✅ MongoDB Database Connected Successfully!"))
@@ -28,7 +28,7 @@ const Player = mongoose.model('Player', playerSchema);
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
-// SECRET ADMIN PANEL ROUTE
+// 👑 SECRET ADMIN PANEL ROUTE
 app.get('/admin-secret-panel', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -108,13 +108,12 @@ let pendingWithdrawals = {};
 let rooms = {};
 let adminSocketId = null;
 
-// Live Winner Ticker
+// Fake Live Winner Ticker
 setInterval(() => {
     const bots = ["CryptoKing", "LuckySpinner", "RajaBet", "CoinMaster"];
     io.emit('liveTickerUpdate', { text: `🔥 ${bots[Math.floor(Math.random()*bots.length)]} won ₹${Math.floor(Math.random()*4500)+500}!` });
 }, 3500);
 
-// SAFE DATABASE SYNC FUNCTION 
 async function getAndUpdateUser(phone, name) {
     if(!phone) return null;
     let u = await Player.findOne({ phone: phone });
@@ -137,6 +136,23 @@ io.on('connection', (socket) => {
         if(user) {
             socket.emit('updateBalance', { newBalance: user.balance });
             if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
+        }
+    });
+
+    // 🎁 COUPON CODE LOGIC
+    socket.on('redeemCoupon', async (data) => {
+        if(!data.phone) return socket.emit('couponResult', { status: 'error', message: '❌ Invalid Session! Please refresh the page.' });
+        if(data.code === 'ROYAL20K') {
+            let user = await getAndUpdateUser(data.phone, data.name);
+            if(user) {
+                user.balance += 20000; 
+                await user.save();
+                socket.emit('updateBalance', { newBalance: user.balance });
+                socket.emit('couponResult', { status: 'success', message: '🎉 EXCELLENT! Special Coupon Code Applied. ₹20,000 cash balance added to your wallet!' });
+                if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
+            }
+        } else {
+            socket.emit('couponResult', { status: 'error', message: '❌ Invalid Coupon Code! Please try again.' });
         }
     });
 
@@ -194,14 +210,12 @@ io.on('connection', (socket) => {
         if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
     });
 
-    // GLOBAL MATCH TOSS
+    // 🎲 GLOBAL MATCH
     socket.on('placeBet', async (data) => {
         if(!data.phone) return socket.emit('error', { message: 'Session Error! Refresh page.' });
         let u = await getAndUpdateUser(data.phone, data.name);
         
-        if(!u || u.balance < data.amount) {
-            return socket.emit('error', { message: 'Insufficient balance!' });
-        }
+        if(!u || u.balance < data.amount) return socket.emit('error', { message: 'Insufficient balance!' });
         
         u.balance -= data.amount;
         await u.save();
@@ -231,7 +245,7 @@ io.on('connection', (socket) => {
         }, 2500);
     });
 
-    // --- PVP DYNAMIC LOOP ENGINE ---
+    // ⚔️ PVP FRIEND LOOP ENGINE
     socket.on('createRoom', async (data) => {
         if(!data.phone) return;
         let u = await getAndUpdateUser(data.phone);
