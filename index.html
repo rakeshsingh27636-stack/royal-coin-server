@@ -147,6 +147,20 @@
         <div style="color:#ffd700; margin-top:10px; font-size: 14px;">⏳ Waiting for friend to join...</div>
       </div>
 
+      <div class="modal-card" id="pvp-challenge-pop" style="display:none;">
+        <h2>CHALLENGE DETAILS ⚔️</h2>
+        <p style="color:#fffde7; font-size:15px; margin: 15px 0 5px 0;">Opponent has modified the match terms:</p>
+        <div style="background: rgba(0,0,0,0.6); padding: 12px; border-radius: 10px; border: 1px solid var(--gold-royal); margin-bottom: 15px;">
+          <p style="font-size: 18px; color: #00ff99; margin: 4px 0;">Wager Value: <strong id="challenge-wager-txt">₹0</strong></p>
+          <p style="font-size: 18px; color: var(--gold-royal); margin: 4px 0;">Chosen Prediction: <strong id="challenge-side-txt">HEADS</strong></p>
+        </div>
+        <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Game starts instantly once you hit Accept.</p>
+        <div class="modal-row">
+          <button class="hub-btn deposit-btn" onclick="acceptPvpChallenge()">✅ ACCEPT & PLAY</button>
+          <button class="hub-btn withdraw-btn" onclick="clickPvpExit()">❌ REJECT & EXIT</button>
+        </div>
+      </div>
+
       <div class="modal-card" id="pvp-post-match" style="display:none;">
         <h2>GAME OVER</h2>
         <p id="pvp-match-result-text" style="font-size:18px; font-weight:bold; margin:15px 0;"></p>
@@ -174,7 +188,7 @@
             <button id="rematch-btn-heads" class="side-btn" style="flex:1;" onclick="selectRematchSide('heads')">HEADS</button>
             <button id="rematch-btn-tails" class="side-btn" style="flex:1;" onclick="selectRematchSide('tails')">TAILS</button>
           </div>
-          <button class="action-btn" onclick="submitRematchChoices()">START REMATCH TOSS</button>
+          <button class="action-btn" onclick="submitRematchChoices()">SEND CHALLENGE TERM</button>
         </div>
       </div>
     </div>
@@ -231,7 +245,6 @@
     let savedBioCred = localStorage.getItem('royalBioCred');
     let rematchSide = null;
 
-    // APNI UPI ID YAHAN CHANGE KAREIN
     const MY_UPI_ID = "royalcasino@ybl"; 
 
     function bufferEncode(value) { return btoa(String.fromCharCode.apply(null, new Uint8Array(value))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
@@ -307,7 +320,15 @@
             if(audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination);
             if(type === 'click') { osc.frequency.setValueAtTime(800, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.05); }
-            else if(type === 'flip') { osc.type = 'triangle'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.3); gain.gain.setValueAtTime(0.05, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.3); }
+            // ✅ PREMIUM SMOOTH NORMAL TICK SOUND ENGINE FOR FLIPPING
+            else if(type === 'flip') { 
+                osc.type = 'sine'; 
+                osc.frequency.setValueAtTime(350, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.12); 
+                gain.gain.setValueAtTime(0.04, audioCtx.currentTime); 
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.12); 
+            }
             else if(type === 'win') { osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
             else if(type === 'loss') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
         } catch(e) {}
@@ -325,8 +346,7 @@
     function submitCoupon() {
         let code = document.getElementById("coupon-code-input").value.trim().toUpperCase();
         if(code === "") return alert("Please enter coupon code!");
-        playSound('click'); 
-        socket.emit('redeemCoupon', { code: code, phone: userPhone, name: userName });
+        playSound('click'); socket.emit('redeemCoupon', { code: code, phone: userPhone, name: userName });
     }
     
     socket.on('couponResult', (data) => {
@@ -370,11 +390,12 @@
         socket.emit('placeBet', { side: lockedSide, amount: selectedWager, phone: userPhone, name: userName });
     }
     
+    // ✅ RECEIVE AUTO-UPDATE BALANCE VALUES PERFECTLY FROM BACKEND EMITS
     socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); updateGuidance(); });
     socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
     socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; updateGuidance(); });
 
-    socket.on('matchmakingStarted', (data) => { document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; document.getElementById("bot-name").innerHTML = data.bot.name; document.getElementById("bot-img").innerHTML = data.bot.avatar; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+    socket.on('matchmakingStarted', (data) => { document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; document.getElementById("bot-name").innerHTML = data.bot.name; document.getElementById("bot-img").innerHTML = data.bot.avatar; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 140); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
     
     socket.on('gameResult', (data) => {
         const coin = document.getElementById("coin-object");
@@ -386,7 +407,7 @@
             document.getElementById("toss-button").disabled = false; updateGuidance();
 
             if(data.isPvp) {
-                document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none";
+                document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none";
                 document.getElementById('pvp-match-result-text').innerText = data.status === 'won' ? "🎉 YOU WON DOUBLE POT!" : "😢 YOU LOST THIS ROUND!";
                 document.getElementById('pvp-post-match').style.display = "block"; toggleModal('pvpModal', true);
             }
@@ -398,13 +419,35 @@
     socket.on('roomCreated', (data) => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerHTML = data.code; document.getElementById('room-wager-info').innerHTML = `Wager: ₹${data.wager} | Side: ${data.side.toUpperCase()}`; });
     function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code, phone: userPhone }); } else { alert("Enter 4-Digit Code!"); } }
 
+    // ✅ SHOW CHALLENGE DETAILED NOTIFICATION SHEET
+    socket.on('pvpShowChallengePop', (data) => {
+        document.getElementById('pvp-options').style.display = "none";
+        document.getElementById('pvp-waiting').style.display = "none";
+        document.getElementById('pvp-post-match').style.display = "none";
+        document.getElementById('pvp-rematch-prompt').style.display = "none";
+        document.getElementById('pvp-rematch-setup').style.display = "none";
+        
+        document.getElementById('challenge-wager-txt').innerText = "₹" + data.wager;
+        document.getElementById('challenge-side-txt').innerText = data.side.toUpperCase();
+        
+        document.getElementById('pvp-challenge-pop').style.display = "block";
+        toggleModal('pvpModal', true);
+    });
+
+    function acceptPvpChallenge() {
+        playSound('click');
+        document.getElementById('pvp-challenge-pop').style.display = "none";
+        toggleModal('pvpModal', false);
+        socket.emit('pvpAcceptChallenge');
+    }
+
     function clickPvpPlayAgain() {
         if(currentBalance < 100) { alert("Insufficient Funds! Add money first."); toggleModal('pvpModal', false); toggleModal('fundsModal', true); return; }
         playSound('click'); document.getElementById('pvp-post-match').innerHTML = "<h3 style='color:#ffd700;'>⏳ Waiting for friend's approval...</h3>"; socket.emit('pvpRequestRematch');
     }
     function clickPvpExit() { playSound('click'); socket.emit('pvpExitRoom'); toggleModal('pvpModal', false); }
 
-    socket.on('pvpPromptRematchInvite', () => { document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "block"; toggleModal('pvpModal', true); });
+    socket.on('pvpPromptRematchInvite', () => { document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "block"; toggleModal('pvpModal', true); });
 
     function responseRematch(action) {
         playSound('click');
@@ -412,8 +455,8 @@
         socket.emit('pvpRematchResponse', { action: action });
     }
 
-    socket.on('pvpSetupTurnChoice', () => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "block"; rematchSide = null; document.getElementById('rematch-btn-heads').classList.remove('selected'); document.getElementById('rematch-btn-tails').classList.remove('selected'); toggleModal('pvpModal', true); });
-    socket.on('pvpWaitingForFriendTurn', () => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerText = "LOOP"; document.getElementById('room-wager-info').innerText = "Friend is deciding bet values & sides..."; toggleModal('pvpModal', true); });
+    socket.on('pvpSetupTurnChoice', () => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "block"; rematchSide = null; document.getElementById('rematch-btn-heads').classList.remove('selected'); document.getElementById('rematch-btn-tails').classList.remove('selected'); toggleModal('pvpModal', true); });
+    socket.on('pvpWaitingForFriendTurn', () => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerText = "LOOP"; document.getElementById('room-wager-info').innerText = "Friend is deciding bet values & sides..."; toggleModal('pvpModal', true); });
 
     function selectRematchSide(side) { playSound('click'); rematchSide = side; document.getElementById('rematch-btn-heads').classList.remove('selected'); document.getElementById('rematch-btn-tails').classList.remove('selected'); document.getElementById('rematch-btn-' + side).classList.add('selected'); }
     function submitRematchChoices() {
@@ -422,7 +465,7 @@
         playSound('click'); socket.emit('pvpSubmitRematchChoices', { wager: wager, side: rematchSide }); toggleModal('pvpModal', false);
     }
     
-    socket.on('pvpRematchMatchStarted', (data) => { toggleModal('pvpModal', false); document.getElementById("status-terminal").className = "result-panel"; document.getElementById("status-terminal").innerHTML = data.message; document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; document.getElementById("bot-img").innerHTML = "😎"; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 200); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+    socket.on('pvpRematchMatchStarted', (data) => { toggleModal('pvpModal', false); document.getElementById("status-terminal").className = "result-panel"; document.getElementById("status-terminal").innerHTML = data.message; document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; document.getElementById("bot-img").innerHTML = "😎"; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 140); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
     socket.on('pvpRoomClosedNotify', (msg) => { alert(msg); toggleModal('pvpModal', false); });
   </script>
 </body>

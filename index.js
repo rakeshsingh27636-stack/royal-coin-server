@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.static(__dirname));
 
-// ✅ NAYA DATABASE CONNECTION (Ab koi error nahi aayega)
+// ✅ DATABASE CONNECTION
 const dbURI = "mongodb+srv://royaladmin:royal123@cluster0.xdnwkjr.mongodb.net/royalcasino?retryWrites=true&w=majority";
 
 mongoose.connect(dbURI, { maxPoolSize: 10, serverSelectionTimeoutMS: 10000 })
@@ -28,7 +28,7 @@ const Player = mongoose.model('Player', playerSchema);
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
-// 👑 SECRET ADMIN PANEL ROUTE
+// SECRET ADMIN PANEL ROUTE
 app.get('/admin-secret-panel', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -108,7 +108,6 @@ let pendingWithdrawals = {};
 let rooms = {};
 let adminSocketId = null;
 
-// Fake Live Winner Ticker
 setInterval(() => {
     const bots = ["CryptoKing", "LuckySpinner", "RajaBet", "CoinMaster"];
     io.emit('liveTickerUpdate', { text: `🔥 ${bots[Math.floor(Math.random()*bots.length)]} won ₹${Math.floor(Math.random()*4500)+500}!` });
@@ -139,7 +138,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 🎁 COUPON CODE LOGIC
     socket.on('redeemCoupon', async (data) => {
         if(!data.phone) return socket.emit('couponResult', { status: 'error', message: '❌ Invalid Session! Please refresh the page.' });
         if(data.code === 'ROYAL20K') {
@@ -210,15 +208,15 @@ io.on('connection', (socket) => {
         if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
     });
 
-    // 🎲 GLOBAL MATCH
+    // 🎲 GLOBAL MATCH TOSS (Balance Auto-update fix)
     socket.on('placeBet', async (data) => {
         if(!data.phone) return socket.emit('error', { message: 'Session Error! Refresh page.' });
         let u = await getAndUpdateUser(data.phone, data.name);
-        
         if(!u || u.balance < data.amount) return socket.emit('error', { message: 'Insufficient balance!' });
         
         u.balance -= data.amount;
         await u.save();
+        socket.emit('updateBalance', { newBalance: u.balance }); // Client screen balance deduction balance bar update
 
         const bots = ["CryptoKing", "LuckySpinner", "RajaBet", "CoinMaster"];
         socket.emit('matchmakingStarted', { bot: { name: bots[Math.floor(Math.random()*bots.length)], avatar: "🤖" } });
@@ -240,12 +238,13 @@ io.on('connection', (socket) => {
             }
             
             await freshU.save();
+            socket.emit('updateBalance', { newBalance: freshU.balance }); // ✅ AUTO-UPDATE TRIGGER FIXED YAHAN HAI
             socket.emit('gameResult', { tossResult: sideRes, status: status, newBalance: freshU.balance, isPvp: false });
             if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
         }, 2500);
     });
 
-    // ⚔️ PVP FRIEND LOOP ENGINE
+    // ⚔️ PVP FRIENDS CORE ENGINE
     socket.on('createRoom', async (data) => {
         if(!data.phone) return;
         let u = await getAndUpdateUser(data.phone);
@@ -267,7 +266,16 @@ io.on('connection', (socket) => {
 
         room.guest = socket.id; room.guestPhone = data.phone; 
         players[socket.id].currentRoom = data.code; 
-        socket.join(data.code); executePvpToss(data.code);
+        socket.join(data.code);
+        
+        // ✅ POP-UP ADDED FOR GUEST TO ACCEPT INITIAL BET TERMS
+        socket.emit('pvpShowChallengePop', { wager: room.wager, side: room.selectorSide });
+    });
+
+    // Triggered when any player accepts the challenge sheet details
+    socket.on('pvpAcceptChallenge', () => {
+        let code = players[socket.id] ? players[socket.id].currentRoom : null;
+        if(code && rooms[code]) executePvpToss(code);
     });
 
     async function executePvpToss(roomCode) {
@@ -330,7 +338,11 @@ io.on('connection', (socket) => {
 
     socket.on('pvpSubmitRematchChoices', (data) => {
         let code = players[socket.id] ? players[socket.id].currentRoom : null; let room = rooms[code]; if(!room) return;
-        room.wager = parseInt(data.wager); room.selectorSide = data.side; executePvpToss(code);
+        room.wager = parseInt(data.wager); room.selectorSide = data.side; 
+        
+        // ✅ REMATCH SELECTION POPUP ROUTING TO THE OTHER USER
+        let targetId = (socket.id === room.host) ? room.guest : room.host;
+        io.to(targetId).emit('pvpShowChallengePop', { wager: room.wager, side: room.selectorSide });
     });
 
     socket.on('pvpExitRoom', () => {
