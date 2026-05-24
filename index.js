@@ -108,12 +108,15 @@ let pendingWithdrawals = {};
 let rooms = {};
 let adminSocketId = null;
 
-// Ticker with real names
-const fakeRealNames = ["Vikram_777", "Aarav_Pro", "Rahul_King", "Raj_HighRoller", "Amit_Casino", "Neha_Spins", "Priya_Win", "Kabir_Ace", "Lucky_Karan", "Rohan_Bet", "Anjali_007", "Ravi_Strike"];
+// ✅ 1000+ REALISTIC NAMES GENERATOR
+const firstNames = ["Rahul", "Vikram", "Aarav", "Priya", "Neha", "Kabir", "Amit", "Raj", "Karan", "Rohan", "Anjali", "Ravi", "Suresh", "Ramesh", "Sunil", "Vikas", "Pooja", "Kavita", "Sanjay", "Ajay", "Vijay", "Anita", "Sunita", "Deepak", "Manoj", "Anil", "Mukesh", "Dinesh", "Gaurav", "Saurabh", "Ashish", "Manish", "Nitin", "Sachin", "Vishal", "Yogesh", "Pankaj", "Tarun", "Varun", "Arun", "Akash", "Rishabh", "Shubham", "Abhishek", "Aditya", "Nikhil", "Prashant", "Sumit", "Mohit", "Rohit"];
+const tags = ["_Pro", "_King", "_Ace", "_777", "_007", "_Win", "_Casino", "_HighRoller", "_Bet", "_Spins", "_99", "_Master", "_Gamer", "_Vip", "_Boss", "_Lucky", "_Don", "_Shark", "_Star", "_Ninja"];
+let fakeRealNames = [];
+firstNames.forEach(name => { tags.forEach(tag => { fakeRealNames.push(name + tag); }); });
 
 setInterval(() => {
     io.emit('liveTickerUpdate', { text: `🔥 ${fakeRealNames[Math.floor(Math.random()*fakeRealNames.length)]} won ₹${Math.floor(Math.random()*4500)+500}!` });
-}, 3500);
+}, 4500);
 
 async function getAndUpdateUser(phone, name) {
     if(!phone) return null;
@@ -210,7 +213,7 @@ io.on('connection', (socket) => {
         if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
     });
 
-    // 🎲 GLOBAL MATCH TOSS
+    // 🎲 GLOBAL MATCH TOSS (With Timings)
     socket.on('placeBet', async (data) => {
         if(!data.phone) return socket.emit('error', { message: 'Session Error! Refresh page.' });
         let u = await getAndUpdateUser(data.phone, data.name);
@@ -220,31 +223,35 @@ io.on('connection', (socket) => {
         await u.save();
         socket.emit('updateBalance', { newBalance: u.balance }); 
 
-        // Generating a random real-sounding opponent name
-        let randomOpponent = fakeRealNames[Math.floor(Math.random() * fakeRealNames.length)];
-        socket.emit('matchmakingStarted', { bot: { name: randomOpponent, avatar: "😎" } });
-        
-        setTimeout(async () => {
-            let freshU = await Player.findById(u._id);
-            if(!freshU) return;
+        // ✅ MATCHMAKING DELAY (3.5 Seconds)
+        setTimeout(() => {
+            let randomOpponent = fakeRealNames[Math.floor(Math.random() * fakeRealNames.length)];
+            socket.emit('matchmakingStarted', { bot: { name: randomOpponent, avatar: "😎" } });
+            
+            // ✅ COIN FLIP DURATION (5 Seconds)
+            setTimeout(async () => {
+                let freshU = await Player.findById(u._id);
+                if(!freshU) return;
 
-            const sideRes = Math.random() < 0.5 ? 'heads' : 'tails';
-            let status = 'lost';
-            
-            freshU.matchesPlayed += 1;
-            if(sideRes === data.side) { 
-                freshU.balance += (data.amount * 2); 
-                freshU.totalWon += data.amount;
-                status = 'won'; 
-            } else {
-                freshU.totalLost += data.amount;
-            }
-            
-            await freshU.save();
-            socket.emit('updateBalance', { newBalance: freshU.balance }); 
-            socket.emit('gameResult', { tossResult: sideRes, status: status, newBalance: freshU.balance, isPvp: false });
-            if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
-        }, 2500);
+                const sideRes = Math.random() < 0.5 ? 'heads' : 'tails';
+                let status = 'lost';
+                
+                freshU.matchesPlayed += 1;
+                if(sideRes === data.side) { 
+                    freshU.balance += (data.amount * 2); 
+                    freshU.totalWon += data.amount;
+                    status = 'won'; 
+                } else {
+                    freshU.totalLost += data.amount;
+                }
+                
+                await freshU.save();
+                socket.emit('updateBalance', { newBalance: freshU.balance }); 
+                socket.emit('gameResult', { tossResult: sideRes, status: status, newBalance: freshU.balance, isPvp: false });
+                if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
+            }, 5000); 
+
+        }, 3500); 
     });
 
     // ⚔️ PVP FRIENDS CORE ENGINE
@@ -296,6 +303,7 @@ io.on('connection', (socket) => {
 
         io.to(roomCode).emit('pvpRematchMatchStarted', { message: "Coin In The Air! Tossing..." });
 
+        // ✅ PVP COIN FLIP DURATION (5 Seconds)
         setTimeout(async () => {
             let hFresh = await Player.findById(hostDb._id);
             let gFresh = await Player.findById(guestDb._id);
@@ -319,7 +327,7 @@ io.on('connection', (socket) => {
             io.to(room.guest).emit('gameResult', { tossResult: result, status: (winnerSocketId === room.guest ? 'won' : 'lost'), newBalance: gFresh.balance, isPvp: true });
             
             if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
-        }, 2500);
+        }, 5000);
     }
 
     socket.on('pvpRequestRematch', () => {

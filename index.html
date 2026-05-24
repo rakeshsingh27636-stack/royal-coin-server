@@ -223,7 +223,7 @@
           <button id="btn-tails" class="side-btn tails-btn" onclick="selectSide('tails')">TAILS</button>
         </div>
         <button class="action-btn" id="toss-button" onclick="startRoyalGame()">PLAY GLOBAL</button>
-        <button class="pvp-btn" onclick="openPvPMenu()">⚔️ PLAY WITH FRIEND</button>
+        <button class="pvp-btn" id="pvp-main-btn" onclick="openPvPMenu()">⚔️ PLAY WITH FRIEND</button>
       </div>
       <div class="live-ticker-patti"><div class="ticker-wrap"><div class="ticker-text" id="patti-txt">⚡ Connecting Live Rooms...</div></div></div>
     </div>
@@ -402,32 +402,67 @@
 
     function startRoyalGame() {
         validateWager(); if(!lockedSide) return alert("Select side first!"); if(selectedWager > currentBalance) return alert("Insufficient balance!");
-        playSound('click'); document.getElementById("toss-button").disabled = true; updateGuidance();
+        playSound('click'); 
+        
+        // UI LOCKS TO PREVENT SPAMMING
+        document.getElementById("toss-button").disabled = true; 
+        document.getElementById("pvp-main-btn").style.pointerEvents = "none";
+        
+        updateGuidance();
         document.getElementById("status-terminal").innerHTML = "SEARCHING GLOBAL LOBBY..."; document.getElementById("bot-name").innerHTML = "Searching..."; document.getElementById("bot-img").innerHTML = "⌛";
         socket.emit('placeBet', { side: lockedSide, amount: selectedWager, phone: userPhone, name: userName });
     }
     
     socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); updateGuidance(); });
     socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
-    socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; updateGuidance(); });
+    socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; document.getElementById("pvp-main-btn").style.pointerEvents = "auto"; updateGuidance(); });
 
-    socket.on('matchmakingStarted', (data) => { document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; document.getElementById("bot-name").innerHTML = data.bot.name; document.getElementById("bot-img").innerHTML = data.bot.avatar; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 140); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("status-terminal").innerHTML = "TOSSING!"; document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+    // ✅ 5 SECOND MATCHMAKING ANIMATION
+    socket.on('matchmakingStarted', (data) => { 
+        document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; 
+        document.getElementById("bot-name").innerHTML = data.bot.name; 
+        document.getElementById("bot-img").innerHTML = data.bot.avatar; 
+        let flipAudioInterval = setInterval(() => { playSound('flip'); }, 140); 
+        setTimeout(() => { clearInterval(flipAudioInterval); }, 5000); // Wait 5 seconds
+        document.getElementById("status-terminal").innerHTML = "TOSSING!"; 
+        document.getElementById("coin-object").className = "coin flipping"; 
+    });
     
+    // ✅ 3 SECOND WAITING COOLDOWN IMPLEMENTATION
     socket.on('gameResult', (data) => {
         const coin = document.getElementById("coin-object");
         coin.className = data.tossResult === 'heads' ? "coin coin-stop-heads" : "coin coin-stop-tails";
+        
         setTimeout(() => {
             if(data.status === 'won') { playSound('win'); spawnGoldRain(); document.getElementById("status-terminal").className = "result-panel win"; } 
             else { playSound('loss'); document.getElementById("status-terminal").className = "result-panel loss"; }
             document.getElementById("status-terminal").innerHTML = `${data.status.toUpperCase()}! Result: ${data.tossResult.toUpperCase()}`;
-            document.getElementById("toss-button").disabled = false; updateGuidance();
 
-            if(data.isPvp) {
-                document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none";
-                document.getElementById('pvp-match-result-text').innerText = data.status === 'won' ? "🎉 YOU WON DOUBLE POT!" : "😢 YOU LOST THIS ROUND!";
-                document.getElementById('pvp-post-match').style.display = "block"; toggleModal('pvpModal', true);
-            }
-        }, 600);
+            // Cooldown Stage
+            setTimeout(() => {
+                document.getElementById("status-terminal").className = "result-panel";
+                document.getElementById("status-terminal").innerHTML = "⏳ WAITING... NEXT ROUND IN 3s";
+
+                setTimeout(() => {
+                    document.getElementById("status-terminal").innerHTML = "AWAITING PREDICTION...";
+                    document.getElementById("bot-name").innerHTML = "SYS.SCAN...";
+                    document.getElementById("bot-img").innerHTML = "🤖";
+                    
+                    // RE-ENABLE BUTTONS
+                    document.getElementById("toss-button").disabled = false; 
+                    document.getElementById("pvp-main-btn").style.pointerEvents = "auto";
+                    updateGuidance();
+
+                    if(data.isPvp) {
+                        document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none";
+                        document.getElementById('pvp-match-result-text').innerText = data.status === 'won' ? "🎉 YOU WON DOUBLE POT!" : "😢 YOU LOST THIS ROUND!";
+                        document.getElementById('pvp-post-match').style.display = "block"; toggleModal('pvpModal', true);
+                    }
+                }, 3000); // 3 seconds total wait time
+
+            }, 1500); // show result text for 1.5s before showing wait message
+
+        }, 600); // coin drop animation duration
     });
 
     function openPvPMenu() { validateWager(); if(!lockedSide) return alert("Pehle HEADS ya TAILS select kijiye!"); if(selectedWager > currentBalance) return alert("Balance kam hai!"); document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
@@ -480,7 +515,18 @@
         playSound('click'); socket.emit('pvpSubmitRematchChoices', { wager: wager, side: rematchSide }); toggleModal('pvpModal', false);
     }
     
-    socket.on('pvpRematchMatchStarted', (data) => { toggleModal('pvpModal', false); document.getElementById("status-terminal").className = "result-panel"; document.getElementById("status-terminal").innerHTML = data.message; document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; document.getElementById("bot-img").innerHTML = "😎"; let flipAudioInterval = setInterval(() => { playSound('flip'); }, 140); setTimeout(() => { clearInterval(flipAudioInterval); document.getElementById("coin-object").className = "coin flipping"; }, 1500); });
+    // ✅ 5 SECOND PVP ANIMATION
+    socket.on('pvpRematchMatchStarted', (data) => { 
+        toggleModal('pvpModal', false); 
+        document.getElementById("status-terminal").className = "result-panel"; 
+        document.getElementById("status-terminal").innerHTML = data.message; 
+        document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; 
+        document.getElementById("bot-img").innerHTML = "😎"; 
+        let flipAudioInterval = setInterval(() => { playSound('flip'); }, 140); 
+        setTimeout(() => { clearInterval(flipAudioInterval); }, 5000); 
+        document.getElementById("coin-object").className = "coin flipping"; 
+    });
+    
     socket.on('pvpRoomClosedNotify', (msg) => { alert(msg); toggleModal('pvpModal', false); });
   </script>
 </body>
