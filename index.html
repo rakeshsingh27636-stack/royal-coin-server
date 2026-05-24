@@ -10,6 +10,19 @@
   <title>Royal Casino Coin Toss</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
+  
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          console.log('Service Worker Registered!', reg);
+        }).catch(err => {
+          console.log('Service Worker Failed:', err);
+        });
+      });
+    }
+  </script>
+
   <style>
     :root { --gold-royal: #ffd700; --gold-light: #fffde7; --gold-dark: #b8860b; --burgundy-dark: #0a0001; --burgundy-light: #250006; }
     body { font-family: 'Montserrat', sans-serif; background: var(--burgundy-dark); background-image: radial-gradient(circle at 50% 30%, var(--burgundy-light) 0%, var(--burgundy-dark) 100%); color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; box-sizing: border-box; }
@@ -70,7 +83,6 @@
     .login-input { padding: 12px; background: #000; border: 1px solid var(--gold-royal); color: var(--gold-royal); font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: bold; text-align: center; border-radius: 5px; width: 90%; margin: 0 auto; outline: none; }
     .lock-icon { font-size: 40px; margin-bottom: 15px; }
 
-    /* TX HISTORY STYLES */
     .tx-item { background: #250006; border: 1px solid var(--gold-dark); border-radius: 8px; padding: 12px; margin-bottom: 10px; text-align: left; }
     .tx-header { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;}
     .tx-date { font-size: 10px; color: #aaa; }
@@ -92,7 +104,7 @@
           <input type="number" id="user-mobile" class="login-input" placeholder="Mobile Number" />
           <button class="hub-btn deposit-btn" id="btn-login" onclick="startAppSession()">CREATE ID & SECURE LOCK</button>
         </div>
-        <p style="color:#ff3366; font-size:11px; margin-top:10px; display:none;" id="login-error"></p>
+        <p style="color:#ff3366; font-size:12px; margin-top:15px; display:none; line-height:1.5;" id="login-error"></p>
       </div>
     </div>
 
@@ -299,6 +311,14 @@
         updateGuidance();
     };
 
+    // ✅ ANTI-GLITCH LOGIN FALLBACK
+    function resetLogin() {
+        localStorage.removeItem('royalBioCred');
+        localStorage.removeItem('royalUserName');
+        localStorage.removeItem('royalUserPhone');
+        window.location.reload();
+    }
+
     async function startAppSession() {
         let nameInput = document.getElementById('user-name').value;
         let phoneInput = document.getElementById('user-mobile').value;
@@ -311,7 +331,12 @@
                 const publicKey = { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ id: bufferDecode(savedBioCred), type: 'public-key' }], userVerification: 'required', timeout: 60000 };
                 await navigator.credentials.get({ publicKey });
                 finalizeLogin();
-            } catch(e) { btn.innerText = "🔓 UNLOCK APP"; errorTxt.innerText = "Authentication Cancelled!"; errorTxt.style.display = "block"; }
+            } catch(e) { 
+                btn.innerText = "🔓 UNLOCK APP"; 
+                // ✅ ADDED RESET BUTTON IF THEY CANCEL/FAIL BIOMETRIC
+                errorTxt.innerHTML = "Authentication Failed!<br><a href='#' onclick='resetLogin()' style='color:#ffd700; text-decoration:underline;'>Click here to Login with new details</a>"; 
+                errorTxt.style.display = "block"; 
+            }
         } else {
             if(nameInput.trim() === "" || phoneInput.trim() === "") { errorTxt.innerText = "Please fill both fields!"; errorTxt.style.display = "block"; return; }
             if(!window.PublicKeyCredential) { localStorage.setItem('royalUserName', nameInput); localStorage.setItem('royalUserPhone', phoneInput); userName = nameInput; userPhone = phoneInput; finalizeLogin(); return; }
@@ -321,7 +346,11 @@
                 const cred = await navigator.credentials.create({ publicKey });
                 localStorage.setItem('royalBioCred', bufferEncode(cred.rawId)); localStorage.setItem('royalUserName', nameInput); localStorage.setItem('royalUserPhone', phoneInput);
                 userName = nameInput; userPhone = phoneInput; finalizeLogin();
-            } catch (e) { btn.innerText = "CREATE ID & SECURE LOCK"; errorTxt.innerText = "Error: Setup Screen Lock first!"; errorTxt.style.display = "block"; }
+            } catch (e) { 
+                btn.innerText = "CREATE ID & SECURE LOCK"; 
+                errorTxt.innerText = "Error: Please allow Screen Lock to continue!"; 
+                errorTxt.style.display = "block"; 
+            }
         }
     }
 
@@ -375,7 +404,6 @@
         socket.emit('fetchHistory', { phone: userPhone });
     }
 
-    // ✅ Render History Engine
     socket.on('updateHistory', (txList) => {
         userTxHistory = txList;
         const listDiv = document.getElementById("history-list");
@@ -464,7 +492,6 @@
         
         socket.emit('submitManualDeposit', { amount: amount, utr: utr, phone: userPhone }); 
         
-        // ✅ Auto-Redirect to History & Show premium note
         alert("Request Submitted! Your request is in progress, please wait some time.");
         document.getElementById("deposit-screen").style.display = "none";
         document.getElementById("history-screen").style.display = "block";
