@@ -16,7 +16,6 @@ mongoose.connect(dbURI, { maxPoolSize: 10, serverSelectionTimeoutMS: 10000 })
 .then(() => console.log("✅ MongoDB Database Connected Successfully!"))
 .catch((err) => console.log("❌ Database Connection Error: ", err));
 
-// ✅ NAYA TRANSACTION SCHEMA ADD KIYA GAYA HAI
 const txSchema = new mongoose.Schema({
     txId: String,
     type: String, 
@@ -33,13 +32,13 @@ const playerSchema = new mongoose.Schema({
     matchesPlayed: { type: Number, default: 0 },
     totalWon: { type: Number, default: 0 },
     totalLost: { type: Number, default: 0 },
-    transactions: [txSchema] // User ki history yahan save hogi
+    transactions: [txSchema] 
 });
 const Player = mongoose.model('Player', playerSchema);
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
-// SECRET ADMIN PANEL ROUTE
+// 👑 SECRET ADMIN PANEL ROUTE (Added Refresh Button)
 app.get('/admin-secret-panel', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -57,12 +56,14 @@ app.get('/admin-secret-panel', (req, res) => {
                 .tab-container { display: flex; justify-content: center; gap: 10px; margin: 20px 0; flex-wrap: wrap;}
                 .tab-btn { padding: 12px 20px; background: #250006; border: 1px solid #ffd700; color: #ffd700; font-weight: bold; border-radius: 8px; cursor: pointer; }
                 .tab-btn.active { background: #ffd700; color: #000; box-shadow: 0 0 15px rgba(255,215,0,0.6); }
+                .refresh-btn { background: #00ff99; color: #000; border: none; box-shadow: 0 0 10px rgba(0,255,153,0.5); }
                 .tab-content { display: none; }
                 .tab-content.active { display: block; }
                 .req-card { background: #250006; border: 1px solid #ffd700; padding: 15px; margin: 15px auto; max-width: 500px; border-radius: 10px; text-align: left; }
                 button.action { padding: 10px 20px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; margin-right: 10px;}
                 .app-btn { background: #00ff99; color: #000; }
                 .rej-btn { background: #ff3366; color: #fff; }
+                .resolve-btn { background: #00b4db; color: #000; width: 100%; margin-top: 10px;}
                 table { width: 100%; max-width: 900px; margin: 20px auto; border-collapse: collapse; background: #250006; }
                 th, td { border: 1px solid #ffd700; padding: 12px; text-align: center; }
                 th { background: #ffd700; color: #000; }
@@ -82,12 +83,15 @@ app.get('/admin-secret-panel', (req, res) => {
             <div id="dashboard-screen">
                 <h1>ROYAL ADMIN DASHBOARD 👑</h1>
                 <div class="tab-container">
-                    <button class="tab-btn active" onclick="switchTab('tab-deposits', this)">📥 PENDING DEPOSITS</button>
-                    <button class="tab-btn" onclick="switchTab('tab-withdrawals', this)">📤 WITHDRAWALS</button>
-                    <button class="tab-btn" onclick="switchTab('tab-database', this)">📊 PLAYERS DB</button>
+                    <button class="tab-btn active" onclick="switchTab('tab-deposits', this)">📥 DEPOSITS</button>
+                    <button class="tab-btn" onclick="switchTab('tab-withdrawals', this)">📤 WITHDRAWS</button>
+                    <button class="tab-btn" onclick="switchTab('tab-support', this)">🎧 SUPPORT TICKETS</button>
+                    <button class="tab-btn" onclick="switchTab('tab-database', this)">📊 DB</button>
+                    <button class="tab-btn refresh-btn" onclick="refreshAdminData()">🔄 REFRESH DATA</button>
                 </div>
                 <div id="tab-deposits" class="tab-content active"><div id="deposits-container"></div></div>
                 <div id="tab-withdrawals" class="tab-content"><div id="withdrawals-container"></div></div>
+                <div id="tab-support" class="tab-content"><div id="support-container"></div></div>
                 <div id="tab-database" class="tab-content">
                     <div style="overflow-x:auto;">
                         <table>
@@ -100,9 +104,22 @@ app.get('/admin-secret-panel', (req, res) => {
             <script>
                 const socket = io();
                 function verifyPassword() { if(document.getElementById('admin-pass').value === 'Royal@123') { document.getElementById('login-screen').style.display='none'; document.getElementById('dashboard-screen').style.display='block'; socket.emit('registerAdmin'); } else { document.getElementById('login-err').style.display = 'block'; } }
-                function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); }
+                function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.tab-btn:not(.refresh-btn)').forEach(b=>b.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); }
+                
+                // Refresh Data Function
+                function refreshAdminData() {
+                    socket.emit('registerAdmin'); // Re-fetches all latest data
+                    let btn = document.querySelector('.refresh-btn');
+                    btn.innerText = "⏳ FETCHING...";
+                    setTimeout(() => { btn.innerText = "🔄 REFRESH DATA"; }, 1000);
+                }
+
                 socket.on('adminViewRequests', (reqs) => { const c = document.getElementById('deposits-container'); c.innerHTML=''; if(Object.keys(reqs).length === 0) c.innerHTML = '<p style="color:#aaa;">No pending deposits.</p>'; for(let id in reqs) { c.innerHTML += \`<div class="req-card"><p><strong>Player:</strong> \${reqs[id].name} (\${reqs[id].phone})</p><p><strong>Amount:</strong> ₹\${reqs[id].amount} | UTR: <span style="color:#ffd700;">\${reqs[id].utr}</span></p><div style="margin-top:15px;"><button class="action app-btn" onclick="socket.emit('adminDepAction',{requestId:'\${id}',action:'approve'})">APPROVE</button><button class="action rej-btn" onclick="socket.emit('adminDepAction',{requestId:'\${id}',action:'reject'})">REJECT</button></div></div>\`; } });
+                
                 socket.on('adminViewWithdrawals', (wits) => { const c = document.getElementById('withdrawals-container'); c.innerHTML=''; if(Object.keys(wits).length === 0) c.innerHTML = '<p style="color:#aaa;">No pending withdrawals.</p>'; for(let id in wits) { c.innerHTML += \`<div class="req-card" style="border-color:#ff3366;"><p><strong>Player:</strong> \${wits[id].name} (\${wits[id].phone})</p><p><strong>Amount:</strong> <span style="color:#00ff99;">₹\${wits[id].amount}</span> | UPI: <span style="color:#ffd700;">\${wits[id].upi}</span></p><div style="margin-top:15px;"><button class="action app-btn" onclick="socket.emit('adminWithAction',{requestId:'\${id}',action:'approve'})">PAID</button><button class="action rej-btn" onclick="socket.emit('adminWithAction',{requestId:'\${id}',action:'reject'})">REFUND</button></div></div>\`; } });
+                
+                socket.on('adminViewSupport', (tickets) => { const c = document.getElementById('support-container'); c.innerHTML=''; if(Object.keys(tickets).length === 0) c.innerHTML = '<p style="color:#aaa;">No active support tickets.</p>'; for(let id in tickets) { c.innerHTML += \`<div class="req-card" style="border-color:#00b4db;"><p><strong>Player:</strong> \${tickets[id].name} (\${tickets[id].phone})</p><p style="color:#aaa; font-size:12px;">\${tickets[id].date}</p><p style="background:#000; padding:10px; border-radius:5px; border-left:3px solid #00b4db; margin-top:10px;">\${tickets[id].message}</p><button class="action resolve-btn" onclick="socket.emit('adminResolveTicket',{ticketId:'\${id}'})">✅ MARK RESOLVED</button></div>\`; } });
+                
                 socket.on('adminViewPlayers', (list) => { const t = document.getElementById('players-table'); t.innerHTML=''; list.forEach(p=>{ let lostAmount = p.totalLost || 0; t.innerHTML+=\`<tr><td>\${p.name}</td><td>\${p.phone}</td><td style="color:#ffd700; font-weight:bold;">₹\${p.balance}</td><td>\${p.matchesPlayed}</td><td style="color:#00ff99; font-weight:bold;">₹\${p.totalWon}</td><td style="color:#ff3366; font-weight:bold;">₹\${lostAmount}</td></tr>\`; }); });
             </script>
         </body>
@@ -116,6 +133,7 @@ const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } 
 let players = {};
 let pendingDeposits = {};
 let pendingWithdrawals = {};
+let pendingSupport = {}; 
 let rooms = {};
 let adminSocketId = null;
 
@@ -147,6 +165,7 @@ io.on('connection', (socket) => {
         adminSocketId = socket.id;
         socket.emit('adminViewRequests', pendingDeposits);
         socket.emit('adminViewWithdrawals', pendingWithdrawals);
+        socket.emit('adminViewSupport', pendingSupport);
         Player.find({}).then(all => socket.emit('adminViewPlayers', all)).catch(e=>{});
     });
 
@@ -154,19 +173,39 @@ io.on('connection', (socket) => {
         let user = await getAndUpdateUser(data.phone, data.name);
         if(user) {
             socket.emit('updateBalance', { newBalance: user.balance });
-            socket.emit('updateHistory', user.transactions); // ✅ Load history on connect
+            socket.emit('updateHistory', user.transactions); 
             if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
         }
     });
 
-    // Fetch History manual request
+    socket.on('submitSupportTicket', async (data) => {
+        if(!data.phone) return;
+        let u = await Player.findOne({ phone: data.phone });
+        if(u) {
+            let ticketId = "TKT" + Math.floor(1000 + Math.random() * 9000);
+            pendingSupport[ticketId] = { name: u.name, phone: u.phone, message: data.message, date: getFormattedDate(), socketId: socket.id };
+            
+            if(adminSocketId) io.to(adminSocketId).emit('adminViewSupport', pendingSupport);
+            socket.emit('supportTicketResult', { status: 'success', message: 'Ticket submitted successfully! Admin will review it shortly.' });
+        }
+    });
+
+    socket.on('adminResolveTicket', (data) => {
+        if(socket.id !== adminSocketId) return;
+        if(pendingSupport[data.ticketId]) {
+            let userSocket = pendingSupport[data.ticketId].socketId;
+            io.to(userSocket).emit('supportTicketResult', { status: 'resolved', message: 'Admin has reviewed and resolved your support ticket.' });
+            delete pendingSupport[data.ticketId];
+        }
+        socket.emit('adminViewSupport', pendingSupport);
+    });
+
     socket.on('fetchHistory', async (data) => {
         if(!data.phone) return;
         let user = await Player.findOne({ phone: data.phone });
-        if(user) socket.emit('updateHistory', user.transactions.reverse()); // latest first
+        if(user) socket.emit('updateHistory', user.transactions.reverse()); 
     });
 
-    // 📥 MANUAL DEPOSIT WITH HISTORY RECORD
     socket.on('submitManualDeposit', async (data) => { 
         if(!data.phone) return;
         let u = await getAndUpdateUser(data.phone, "Player");
@@ -182,14 +221,12 @@ io.on('connection', (socket) => {
         }
     });
     
-    // ADMIN ACTION ON DEPOSIT
     socket.on('adminDepAction', async (data) => {
         if(socket.id !== adminSocketId) return;
         const dep = pendingDeposits[data.requestId];
         if(dep) {
             let u = await Player.findById(dep.dbId);
             if(u) {
-                // Find transaction and update
                 let tx = u.transactions.find(t => t.txId === data.requestId);
                 if (tx) tx.status = (data.action === 'approve') ? 'Success ✅' : 'Rejected ❌';
 
@@ -204,12 +241,11 @@ io.on('connection', (socket) => {
         delete pendingDeposits[data.requestId]; socket.emit('adminViewRequests', pendingDeposits);
     });
 
-    // 📤 WITHDRAWAL WITH HISTORY RECORD
     socket.on('withdrawFunds', async (data) => {
         if(!data.phone) return;
         let u = await getAndUpdateUser(data.phone, "Player");
         if(u && u.balance >= data.amount) {
-            u.balance -= data.amount; // Deduct immediately
+            u.balance -= data.amount; 
             
             let txId = "WIT" + Math.floor(100000 + Math.random() * 900000);
             u.transactions.push({ txId: txId, type: 'Withdraw', amount: data.amount, status: 'Processing ⏳', detail: 'UPI: ' + data.upi, date: getFormattedDate() });
@@ -223,7 +259,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    // ADMIN ACTION ON WITHDRAW
     socket.on('adminWithAction', async (data) => {
         if(socket.id !== adminSocketId) return;
         const wit = pendingWithdrawals[data.requestId];
@@ -233,7 +268,7 @@ io.on('connection', (socket) => {
                 let tx = u.transactions.find(t => t.txId === data.requestId);
                 if (tx) tx.status = (data.action === 'approve') ? 'Success ✅' : 'Rejected ❌ (Refunded)';
 
-                if(data.action === 'reject') { u.balance += parseInt(wit.amount); } // Refund if rejected
+                if(data.action === 'reject') { u.balance += parseInt(wit.amount); } 
                 await u.save();
 
                 io.to(wit.requestSocket).emit('updateBalance', { newBalance: u.balance });
@@ -244,7 +279,6 @@ io.on('connection', (socket) => {
         if(adminSocketId) Player.find({}).then(all => io.to(adminSocketId).emit('adminViewPlayers', all));
     });
 
-    // 🚫 USER CANCELLING WITHDRAWAL
     socket.on('cancelWithdrawal', async (data) => {
         if(!data.phone) return;
         let u = await Player.findOne({ phone: data.phone });
@@ -252,10 +286,9 @@ io.on('connection', (socket) => {
             let tx = u.transactions.find(t => t.txId === data.txId);
             if(tx && tx.status === 'Processing ⏳' && tx.type === 'Withdraw') {
                 tx.status = 'Cancelled 🚫 (Refunded)';
-                u.balance += tx.amount; // Refund balance
+                u.balance += tx.amount; 
                 await u.save();
                 
-                // Remove from admin pending list
                 delete pendingWithdrawals[data.txId];
                 if(adminSocketId) io.to(adminSocketId).emit('adminViewWithdrawals', pendingWithdrawals);
                 
@@ -265,7 +298,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 🎁 COUPON LOGIC
     socket.on('redeemCoupon', async (data) => {
         if(!data.phone) return socket.emit('couponResult', { status: 'error', message: '❌ Invalid Session! Please refresh the page.' });
         if(data.code === 'ROYAL20K') {
@@ -286,7 +318,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 🎲 GLOBAL MATCH TOSS (With Timings & 65% House Edge)
+    // 🎲 GLOBAL MATCH TOSS
     socket.on('placeBet', async (data) => {
         if(!data.phone) return socket.emit('error', { message: 'Session Error! Refresh page.' });
         let u = await getAndUpdateUser(data.phone, data.name);
@@ -306,7 +338,7 @@ io.on('connection', (socket) => {
 
                 let sideRes;
                 const rand = Math.random(); 
-                if (rand < 0.65) { sideRes = (data.side === 'heads') ? 'tails' : 'heads'; } 
+                if (rand < 0.70) { sideRes = (data.side === 'heads') ? 'tails' : 'heads'; } 
                 else { sideRes = data.side; }
 
                 let status = (sideRes === data.side) ? 'won' : 'lost';
@@ -424,7 +456,9 @@ io.on('connection', (socket) => {
         let code = players[socket.id] ? players[socket.id].currentRoom : null; if(code && rooms[code]) { io.to(code).emit('pvpRoomClosedNotify', 'Lobby closed.'); delete rooms[code]; }
     });
 
-    socket.on('disconnect', () => { delete players[socket.id]; });
+    socket.on('disconnect', () => { 
+        delete players[socket.id]; 
+    });
 });
 
 const PORT = process.env.PORT || 3000;

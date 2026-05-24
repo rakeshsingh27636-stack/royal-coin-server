@@ -88,6 +88,10 @@
     .tx-date { font-size: 10px; color: #aaa; }
     .tx-stat { font-size: 12px; font-weight: bold; margin-top: 5px;}
     .cancel-tx-btn { background: #ff3366; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-family: 'Montserrat'; font-size: 10px; font-weight: bold; margin-top: 5px; }
+
+    /* VIP FLOATING SUPPORT BUTTON */
+    .floating-support { position: fixed; bottom: 25px; right: 20px; background: linear-gradient(135deg, #ffd700, #b8860b); width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 28px; box-shadow: 0 5px 20px rgba(255,215,0,0.6); cursor: pointer; z-index: 90; border: 2px solid #fff; transition: transform 0.2s; }
+    .floating-support:active { transform: scale(0.9); }
   </style>
 </head>
 <body>
@@ -109,6 +113,22 @@
     </div>
 
     <canvas id="confetti-canvas"></canvas>
+
+    <div class="modal-overlay" id="helpModal">
+      <div class="modal-card">
+        <h2>HELP CENTER 🎧</h2>
+        <p style="color:#aaa; font-size:12px; margin-bottom:15px;">Need assistance with Deposits or Withdrawals?</p>
+        
+        <div class="modal-row">
+          <div style="margin: 5px 0;">
+            <textarea id="support-msg-input" class="login-input" placeholder="Describe your issue in detail here..." style="width: 85%; height: 80px; resize: none; border-radius:8px; text-align:left; font-size:13px;"></textarea>
+            <button class="hub-btn deposit-btn" onclick="submitSupportTicket()" style="margin-top:15px; width:92%;">SUBMIT TICKET</button>
+          </div>
+        </div>
+        
+        <div class="close-modal" onclick="toggleModal('helpModal', false)">Close Help Center</div>
+      </div>
+    </div>
 
     <div class="modal-overlay" id="fundsModal">
       <div class="modal-card" id="funds-main">
@@ -155,7 +175,6 @@
         </div>
         <div class="close-modal" onclick="backToFundsMain()">Back</div>
       </div>
-
     </div>
 
     <div class="modal-overlay" id="pvpModal">
@@ -257,6 +276,9 @@
       </div>
       <div class="live-ticker-patti"><div class="ticker-wrap"><div class="ticker-text" id="patti-txt">⚡ Connecting Live Rooms...</div></div></div>
     </div>
+
+    <div class="floating-support" onclick="toggleModal('helpModal', true)">🎧</div>
+
   </div>
 
   <script>
@@ -311,7 +333,6 @@
         updateGuidance();
     };
 
-    // ✅ ANTI-GLITCH LOGIN FALLBACK
     function resetLogin() {
         localStorage.removeItem('royalBioCred');
         localStorage.removeItem('royalUserName');
@@ -333,7 +354,6 @@
                 finalizeLogin();
             } catch(e) { 
                 btn.innerText = "🔓 UNLOCK APP"; 
-                // ✅ ADDED RESET BUTTON IF THEY CANCEL/FAIL BIOMETRIC
                 errorTxt.innerHTML = "Authentication Failed!<br><a href='#' onclick='resetLogin()' style='color:#ffd700; text-decoration:underline;'>Click here to Login with new details</a>"; 
                 errorTxt.style.display = "block"; 
             }
@@ -403,6 +423,21 @@
         document.getElementById("history-screen").style.display = "block";
         socket.emit('fetchHistory', { phone: userPhone });
     }
+
+    function submitSupportTicket() {
+        let msg = document.getElementById('support-msg-input').value;
+        if(msg.trim().length < 5) return alert("Please describe your issue in detail.");
+        playSound('click');
+        socket.emit('submitSupportTicket', { phone: userPhone, message: msg });
+    }
+    
+    socket.on('supportTicketResult', (data) => {
+        alert(data.message);
+        if(data.status === 'success') {
+            document.getElementById('support-msg-input').value = "";
+            toggleModal('helpModal', false);
+        }
+    });
 
     socket.on('updateHistory', (txList) => {
         userTxHistory = txList;
