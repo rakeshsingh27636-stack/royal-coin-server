@@ -3,135 +3,149 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Royal Premium Hub</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
+  <title>Lucky Royal Premium</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
   
   <style>
-    /* 🔴 PREMIUM COLOR PALETTE */
+    /* 🎨 ULTRA PREMIUM 3D COLOR PALETTE */
     :root { 
-      --bg-dark: #2a0001; 
-      --bg-panel: #4a0408; 
-      --gold-light: #ffea7c; 
-      --gold-mid: #f5a623; 
-      --gold-dark: #b36b00; 
-      --text-main: #ffffff; 
-      --gold-gradient: linear-gradient(180deg, #fff3a1 0%, #f5a623 50%, #b36b00 100%);
-      --red-gradient: linear-gradient(180deg, #ff3366 0%, #990033 100%);
+      --bg-main: #090c15; 
+      --bg-card: #141b2d;
+      --bg-card-hover: #1e293b;
+      --gold-light: #fcf6ba;
+      --gold-mid: #bf953f;
+      --gold-dark: #b38728;
+      --text-main: #ffffff;
+      --text-muted: #94a3b8;
+      --accent-blue: #3b82f6;
+      --neon-blue: #00f0ff;
+      --gold-gradient: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
     }
     
-    body { font-family: 'Montserrat', sans-serif; background: #000; margin: 0; color: var(--text-main); display: flex; justify-content: center; }
+    * { box-sizing: border-box; font-family: 'Poppins', sans-serif; user-select: none; }
+    body { background: #000; margin: 0; color: var(--text-main); display: flex; justify-content: center; }
     
     /* 📱 MOBILE APP CONTAINER */
-    .app-container { width: 100%; max-width: 400px; height: 100vh; background: var(--bg-dark); background-image: radial-gradient(circle at top, #5c0005 0%, #1a0000 100%); display: flex; flex-direction: column; overflow: hidden; position: relative; box-shadow: 0 0 20px rgba(255,215,0,0.2); }
+    .app-container { width: 100%; max-width: 400px; height: 100vh; background: var(--bg-main); display: flex; flex-direction: column; overflow: hidden; position: relative; }
     ::-webkit-scrollbar { display: none; }
 
-    /* 👑 TOP LOGO BAR */
-    .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; }
-    .logo-text { font-size: 22px; font-weight: 900; background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 4px rgba(0,0,0,0.8); letter-spacing: 1px; font-style: italic;}
-    .msg-icon { font-size: 24px; color: var(--gold-mid); text-shadow: 0 0 10px rgba(245, 166, 35, 0.5); }
+    /* --- 👑 TOP HEADER --- */
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px 10px; }
+    .profile-info { display: flex; align-items: center; gap: 12px; }
+    .avatar-wrapper { position: relative; }
+    .avatar { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--gold-mid); background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; box-shadow: 0 0 10px rgba(191, 149, 63, 0.4); }
+    .user-name { font-size: 16px; font-weight: 800; color: #fff; margin: 0; letter-spacing: 0.5px; }
+    .vip-tag { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--gold-light); font-weight: 600; background: rgba(191, 149, 63, 0.15); padding: 2px 8px; border-radius: 10px; width: max-content; margin-top: 2px; border: 1px solid rgba(191,149,63,0.3); }
+    .bell-icon { position: relative; width: 40px; height: 40px; background: var(--bg-card); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; border: 1px solid rgba(255,255,255,0.05); }
+    .bell-badge { position: absolute; top: 0; right: 0; background: #ef4444; color: #fff; font-size: 10px; font-weight: bold; width: 16px; height: 16px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 2px solid var(--bg-main); }
 
-    /* 🎁 MEGA PROMO BANNER */
-    .mega-banner { margin: 0 10px; border-radius: 12px; height: 110px; background: linear-gradient(45deg, #0f2027, #203a43, #2c5364); border: 2px solid #00f0ff; position: relative; overflow: hidden; display: flex; align-items: center; padding: 15px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6); }
-    .banner-content h2 { margin: 0; font-size: 24px; font-weight: 900; color: #fff; text-shadow: 0 2px 5px #000; font-style: italic; }
-    .banner-content p { margin: 5px 0 0; font-size: 13px; color: #00f0ff; font-weight: bold; }
-    .banner-prize { font-size: 28px; background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
+    /* --- 💳 3D WALLET CARD --- */
+    .wallet-card { margin: 15px 20px; background: linear-gradient(135deg, #1a2235 0%, #0d121f 100%); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+    .wallet-title { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 5px; }
+    .wallet-balance-row { display: flex; align-items: center; gap: 15px; }
+    .balance-amt { font-size: 28px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 5px; }
+    .add-btn { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, #3b82f6, #2563eb); border: none; color: #fff; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4); display: flex; justify-content: center; align-items: center; }
+    .vip-progress { margin-top: 15px; display: flex; flex-direction: column; gap: 5px; }
+    .progress-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); font-weight: 600; }
+    .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; }
+    .progress-fill { width: 70%; height: 100%; background: var(--gold-gradient); border-radius: 10px; box-shadow: 0 0 10px rgba(191, 149, 63, 0.5); }
+    .shield-icon { position: absolute; right: 10px; top: 10px; font-size: 75px; opacity: 0.9; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5)); }
 
-    /* 🔊 LIVE TICKER */
-    .ticker-box { display: flex; align-items: center; padding: 5px 10px; margin-top: 5px; font-size: 11px; font-weight: bold; color: #ddd; }
-    .ticker-icon { color: var(--gold-mid); margin-right: 8px; font-size: 14px; }
-    .ticker-wrap { overflow: hidden; white-space: nowrap; width: 100%; }
-    .ticker-text { display: inline-block; padding-left: 100%; animation: scrollText 12s linear infinite; color: #00ff99; }
-    @keyframes scrollText { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+    /* --- 🎁 DAILY TOURNAMENT BANNER --- */
+    .tournament-banner { margin: 0 20px 15px; border-radius: 16px; background: linear-gradient(135deg, #2a145a 0%, #110826 100%); padding: 20px; position: relative; border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 10px 25px rgba(0,0,0,0.5); overflow: hidden; }
+    .tour-title { font-size: 18px; font-weight: 800; color: var(--gold-light); margin: 0; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    .tour-sub { font-size: 11px; color: #e2e8f0; font-weight: 600; margin: 5px 0 15px; }
+    .play-now-btn { background: var(--gold-gradient); color: #000; border: none; padding: 8px 20px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(191, 149, 63, 0.4); }
+    .trophy-icon { position: absolute; right: -10px; top: -10px; font-size: 90px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.8)); }
 
-    /* 💳 USER INFO & WALLET BOX (Lucky Dragon Style) */
-    .user-wallet-panel { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); margin: 5px 10px 10px; padding: 10px; border-radius: 10px; border: 1px solid #5a0005; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
-    .user-profile { display: flex; align-items: center; gap: 10px; }
-    .avatar { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--gold-mid); background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; box-shadow: 0 0 10px rgba(245,166,35,0.4); }
-    .user-details h3 { margin: 0; font-size: 13px; color: #fff; display: flex; align-items: center; gap: 5px; }
-    .vip-badge { background: var(--gold-gradient); color: #000; font-size: 9px; padding: 2px 6px; border-radius: 10px; font-weight: 900; }
-    .balance-box { display: flex; align-items: center; gap: 5px; margin-top: 4px; background: #000; padding: 3px 8px; border-radius: 15px; border: 1px solid #444; width: max-content; }
-    .balance-box span { color: var(--gold-mid); font-weight: 900; font-size: 14px; }
-    
-    .wallet-actions { display: flex; gap: 8px; }
-    .action-btn { display: flex; flex-direction: column; align-items: center; background: transparent; border: none; color: #fff; font-size: 10px; font-weight: bold; cursor: pointer; }
-    .action-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 18px; margin-bottom: 3px; box-shadow: 0 3px 5px rgba(0,0,0,0.5); }
-    .dep-icon { background: linear-gradient(180deg, #00f260, #0575e6); border: 1px solid #fff; }
-    .wit-icon { background: var(--red-gradient); border: 1px solid #fff; }
+    /* --- 🛡️ TRUST BADGES --- */
+    .trust-badges { display: flex; justify-content: space-between; margin: 0 20px 20px; }
+    .badge { display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 10px; border-radius: 12px; flex: 1; margin: 0 4px; justify-content: center; border: 1px solid rgba(255,255,255,0.02); }
+    .badge:first-child { margin-left: 0; }
+    .badge:last-child { margin-right: 0; }
+    .badge i { font-size: 16px; }
+    .badge span { font-size: 9px; font-weight: 600; color: var(--text-muted); text-align: left; line-height: 1.2; }
 
-    /* 🎮 MAIN LAYOUT (Sidebar + Grid) */
-    .main-content { display: flex; flex: 1; overflow: hidden; margin-top: 5px; border-top: 1px solid #4a0408; }
+    /* --- 🏆 LIVE WINNERS --- */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin: 0 20px 10px; }
+    .section-title { font-size: 14px; font-weight: 800; color: #fff; margin: 0; }
+    .view-all { font-size: 12px; color: var(--neon-blue); font-weight: 600; text-decoration: none; cursor: pointer; }
     
-    /* Left Sidebar */
-    .sidebar { width: 75px; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 10px; padding-top: 10px; overflow-y: auto; border-right: 1px solid #4a0408; }
-    .side-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 65px; margin: 0 5px; border-radius: 10px; cursor: pointer; color: #aaa; font-size: 10px; font-weight: bold; transition: 0.3s; }
-    .side-tab.active { background: var(--red-gradient); color: #fff; border: 1px solid #ff3366; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-    .side-icon { font-size: 24px; margin-bottom: 2px; }
+    .winners-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 0 20px 20px; scroll-snap-type: x mandatory; }
+    .winner-card { min-width: 140px; background: var(--bg-card); border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 10px; scroll-snap-align: start; border: 1px solid rgba(255,255,255,0.03); }
+    .win-avatar { width: 35px; height: 35px; border-radius: 50%; background: #333; display: flex; justify-content: center; align-items: center; font-size: 18px; }
+    .win-info h4 { margin: 0; font-size: 10px; color: var(--text-muted); font-weight: 600; }
+    .win-info .amt { margin: 0; font-size: 13px; color: var(--gold-mid); font-weight: 800; }
+    .win-info .time { margin: 0; font-size: 9px; color: #64748b; }
 
-    /* Right Game Grid */
-    .game-area { flex: 1; padding: 10px; overflow-y: auto; padding-bottom: 80px; }
-    .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    /* --- 🎮 6 GAMES GRID --- */
+    .games-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 20px 100px; }
+    .game-card { background: var(--bg-card); border-radius: 16px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; padding-bottom: 10px; }
+    .game-card:active { transform: scale(0.95); background: var(--bg-card-hover); }
+    .game-icon-area { width: 100%; height: 85px; display: flex; justify-content: center; align-items: center; font-size: 55px; position: relative; }
     
-    /* Premium Game Cards */
-    .game-card { border-radius: 15px; overflow: hidden; position: relative; border: 1px solid #5a0005; box-shadow: 0 5px 10px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.2s; background: #111; }
-    .game-card:active { transform: scale(0.95); }
-    .game-img { height: 110px; display: flex; justify-content: center; align-items: center; font-size: 50px; position: relative; }
+    /* 3D Game Icon Backgrounds */
+    .bg-coin { background: radial-gradient(circle, #2d2613, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
+    .bg-wingo { background: radial-gradient(circle, #1e3a5f, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
+    .bg-dice { background: radial-gradient(circle, #2d1b3a, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
+    .bg-roulette { background: radial-gradient(circle, #3a1b1b, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
+    .bg-slots { background: radial-gradient(circle, #3a2b1b, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
+    .bg-sports { background: radial-gradient(circle, #1b3a2a, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
     
-    /* Simulated Custom Game Covers via CSS */
-    .bg-wingo { background: linear-gradient(135deg, #ff00cc, #333399); }
-    .bg-cointoss { background: radial-gradient(circle at center, #ffd700, #b8860b, #000); }
-    .bg-roulette { background: linear-gradient(180deg, #111, #444); border: 2px solid #ffd700; box-sizing:border-box;}
-    .bg-7up { background: linear-gradient(45deg, #00c6ff, #0072ff); }
-    
-    .game-name { background: rgba(0,0,0,0.8); text-align: center; font-size: 12px; font-weight: bold; padding: 6px; color: var(--gold-light); border-top: 1px solid #333; }
-    .badge-new { position: absolute; top: 0; left: 0; background: red; color: white; font-size: 10px; font-weight: 900; padding: 2px 8px; border-bottom-right-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+    .game-name { font-size: 11px; font-weight: 800; color: #fff; margin: 8px 0 2px; text-align: center; }
+    .game-players { font-size: 9px; color: var(--text-muted); font-weight: 600; text-align: center; }
+    .tag { position: absolute; top: 0; right: 0; padding: 2px 6px; font-size: 8px; font-weight: 800; color: #fff; border-bottom-left-radius: 8px; }
+    .tag-hot { background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.5); }
+    .tag-live { background: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.5); }
 
-    /* 🧭 BOTTOM NAVIGATION */
-    .bottom-nav { position: absolute; bottom: 0; width: 100%; height: 65px; background: #1a0001; border-top: 2px solid var(--gold-dark); display: flex; justify-content: space-around; align-items: center; z-index: 100; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.8); }
-    .nav-btn { display: flex; flex-direction: column; align-items: center; color: #777; font-size: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; width: 20%; gap:3px;}
-    .nav-btn.active { color: var(--gold-mid); }
-    .nav-btn i { font-size: 22px; transition: transform 0.3s; }
-    .nav-btn.active i { transform: translateY(-3px) scale(1.1); text-shadow: 0 0 10px var(--gold-mid); }
+    /* --- 🧭 MODERN BOTTOM NAV --- */
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 400px; height: 70px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; width: 20%; gap: 4px; position: relative; }
+    .nav-item.active { color: var(--gold-mid); }
+    .nav-icon { font-size: 22px; transition: 0.3s; }
+    .nav-item.active .nav-icon { transform: translateY(-3px); filter: drop-shadow(0 0 5px rgba(191,149,63,0.8)); }
+    .nav-indicator { position: absolute; bottom: -12px; width: 20px; height: 3px; background: var(--neon-blue); border-radius: 5px; opacity: 0; transition: 0.3s; box-shadow: 0 -2px 10px var(--neon-blue); }
+    .nav-item.active .nav-indicator { opacity: 1; bottom: -8px; }
 
-    /* 🖥️ VIEW SECTIONS (SPA Routing) */
-    .view-section { display: none; width: 100%; height: 100%; flex-direction: column; overflow-y: auto; padding-bottom: 70px; }
-    .view-section.active { display: flex; }
+    /* --- 🖥️ VIEW SECTIONS & MODALS --- */
+    .view-section { display: none; width: 100%; height: 100%; overflow-y: auto; flex-direction: column; }
+    .view-section.active { display: block; }
+    
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px); }
+    .modal-content { background: var(--bg-card); border: 1px solid rgba(191,149,63,0.3); border-radius: 20px; padding: 25px; width: 100%; max-width: 320px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+    .input-field { width: 100%; padding: 14px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 10px; text-align: center; outline: none; font-weight: bold; font-family: 'Poppins'; }
+    .input-field:focus { border-color: var(--gold-mid); }
+    .big-btn { width: 100%; margin: 15px 0 0; padding: 14px; border-radius: 10px; border: none; background: var(--gold-gradient); color: #000; font-weight: 800; font-size: 14px; cursor: pointer; box-shadow: 0 5px 15px rgba(191, 149, 63, 0.4); }
 
-    /* 🏆 PROMO & ACCOUNT PAGES STYLING */
-    .page-header { text-align: center; padding: 20px 0 10px; font-size: 20px; font-weight: 900; color: var(--gold-mid); font-family: 'Cinzel'; border-bottom: 1px solid #333; }
-    .info-card { background: rgba(255,255,255,0.05); border: 1px solid var(--gold-dark); border-radius: 12px; padding: 15px; margin: 15px; text-align: center; }
-    .big-btn { width: calc(100% - 30px); margin: 10px 15px; padding: 15px; border-radius: 10px; border: none; background: var(--gold-gradient); color: #000; font-weight: 900; font-size: 16px; cursor: pointer; text-transform: uppercase; box-shadow: 0 5px 15px rgba(245,166,35,0.4); }
+    /* --- 🪙 ROYAL COIN TOSS ENGINE UI --- */
+    .ct-arena { height: 100vh; background: radial-gradient(circle at center, #1a2235, var(--bg-main)); display: flex; flex-direction: column; }
+    .ct-header { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .back-btn { background: var(--bg-card); color: #fff; border: 1px solid #333; padding: 8px 15px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; }
+    .vs-box { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); margin: 20px; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
+    .player-col { text-align: center; }
+    .player-col .avt { width: 50px; height: 50px; border-radius: 50%; background: #000; border: 2px solid var(--gold-mid); display: flex; justify-content: center; align-items: center; font-size: 24px; margin: 0 auto 5px; }
+    .player-col .nme { font-size: 12px; font-weight: 800; color: #fff; }
+    .vs-txt { font-size: 24px; font-weight: 900; background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     
-    /* 🪙 COIN TOSS GAME CSS (Polished) */
-    .ct-header { display: flex; align-items: center; padding: 15px; background: rgba(0,0,0,0.5); }
-    .back-btn { background: #000; color: var(--gold-mid); border: 1px solid var(--gold-mid); padding: 5px 15px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; }
-    .ct-arena { flex: 1; display: flex; flex-direction: column; padding: 15px; }
-    
-    /* Coin Animation */
-    .coin-container { perspective: 1200px; display: flex; justify-content: center; margin: 20px 0; }
-    .coin { width: 140px; height: 140px; position: relative; transform-style: preserve-3d; border-radius: 50%; box-shadow: 0 15px 30px rgba(0,0,0,0.9); }
-    .coin-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel'; font-size: 28px; font-weight: 900; border: 8px solid #c59b00; box-sizing: border-box; }
-    .coin-heads { background: radial-gradient(circle, #fff, #ffd700, #aa7a00); color: #3a2700; transform: rotateY(0deg); }
-    .coin-tails { background: radial-gradient(circle, #fff, #dcdcdc, #888); color: #111; border-color: #a0a0a0; transform: rotateY(180deg); }
-    .coin.flipping { animation: spinCoin 0.18s infinite linear; }
-    @keyframes spinCoin { 0% { transform: rotateY(0deg); } 50% { transform: rotateY(180deg) translateY(-20px); } 100% { transform: rotateY(360deg); } }
-    .coin-stop-heads { transform: rotateY(0deg); transition: transform 0.5s; }
-    .coin-stop-tails { transform: rotateY(180deg); transition: transform 0.5s; }
-    
-    /* Game Controls */
-    .status-panel { background: #000; border: 1px solid var(--gold-mid); padding: 10px; text-align: center; border-radius: 8px; color: var(--gold-light); font-weight: bold; margin-bottom: 15px;}
-    .bet-controls { background: rgba(0,0,0,0.6); padding: 15px; border-radius: 15px; border: 1px solid #333; }
-    .amt-selector { display: flex; justify-content: space-between; align-items: center; background: #000; padding: 5px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #555; }
+    .coin-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; perspective: 1200px; }
+    .coin-3d { width: 160px; height: 160px; position: relative; transform-style: preserve-3d; border-radius: 50%; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+    .c-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Poppins'; font-size: 26px; font-weight: 900; border: 10px solid #b38728; }
+    .c-heads { background: radial-gradient(circle, #fff, #fcf6ba, #aa771c); color: #3a2700; transform: rotateY(0deg); }
+    .c-tails { background: radial-gradient(circle, #fff, #cbd5e1, #64748b); color: #0f172a; border-color: #94a3b8; transform: rotateY(180deg); }
+    .flipping { animation: flipAnim 0.18s infinite linear; }
+    @keyframes flipAnim { 0% { transform: rotateY(0deg); } 50% { transform: rotateY(180deg) translateY(-30px); } 100% { transform: rotateY(360deg); } }
+    .stop-h { transform: rotateY(0deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .stop-t { transform: rotateY(180deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+    .bottom-controls { background: var(--bg-card); border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+    .status-msg { text-align: center; font-size: 14px; font-weight: 800; color: var(--gold-light); margin-bottom: 15px; }
+    .amt-row { display: flex; justify-content: space-between; align-items: center; background: #000; padding: 8px 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
     .amt-btn { background: none; border: none; color: var(--gold-mid); font-size: 24px; font-weight: bold; cursor: pointer; }
-    .amt-input { background: none; border: none; color: #fff; font-size: 18px; font-weight: bold; width: 80px; text-align: center; outline: none; }
-    .side-btns { display: flex; gap: 10px; margin-bottom: 15px; }
-    .s-btn { flex: 1; padding: 12px; background: #111; color: var(--gold-mid); border: 2px solid #555; border-radius: 8px; font-weight: 900; cursor: pointer; font-family: 'Cinzel'; }
-    .s-btn.active { background: var(--gold-gradient); color: #000; border-color: #fff; box-shadow: 0 0 15px rgba(245,166,35,0.6); }
-
-    /* Modals for Action */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
-    .modal-content { background: var(--bg-panel); border: 2px solid var(--gold-mid); border-radius: 15px; padding: 20px; width: 100%; max-width: 320px; text-align: center; }
-    .input-field { width: 85%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid var(--gold-mid); color: #fff; border-radius: 5px; text-align: center; outline: none; font-weight: bold; }
+    .amt-inp { background: none; border: none; color: #fff; font-size: 20px; font-weight: 800; width: 100px; text-align: center; outline: none; }
+    .side-row { display: flex; gap: 12px; margin-bottom: 15px; }
+    .side-btn { flex: 1; padding: 14px; background: #000; color: var(--text-muted); border: 2px solid #333; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; }
+    .side-btn.active { background: rgba(191,149,63,0.1); color: var(--gold-light); border-color: var(--gold-mid); box-shadow: 0 0 15px rgba(191, 149, 63, 0.2); }
   </style>
 </head>
 <body>
@@ -140,314 +154,255 @@
 
     <div id="view-home" class="view-section active">
       
-      <div class="top-bar">
-        <div class="logo-text">LUCKY ROYAL</div>
-        <div class="msg-icon">✉️</div>
-      </div>
-
-      <div class="mega-banner">
-        <div class="banner-content">
-          <h2>Earning</h2>
-          <div class="banner-prize">10,00,000 rs</div>
-          <p>More Referrals! More Commissions!</p>
-        </div>
-        <div style="font-size: 70px; position: absolute; right: -5px; opacity: 0.8;">🎰</div>
-      </div>
-
-      <div class="ticker-box">
-        <div class="ticker-icon">🔊</div>
-        <div class="ticker-wrap">
-          <div class="ticker-text">Congratulations to user 242*** for winning ₹50,000 in Royal Coin Toss! Play now!</div>
-        </div>
-      </div>
-
-      <div class="user-wallet-panel">
-        <div class="user-profile">
-          <div class="avatar" id="home-avatar">👨‍💻</div>
-          <div class="user-details">
-            <h3 id="home-id">ID: 24239666 <span class="vip-badge">VIP 0</span></h3>
-            <div class="balance-box">
-              <span style="font-size:12px; margin-right:2px;">₹</span>
-              <span id="display-balance">0.00</span>
-              <span style="font-size:12px; color:#aaa; margin-left:5px; cursor:pointer;">🔄</span>
-            </div>
+      <div class="header">
+        <div class="profile-info">
+          <div class="avatar-wrapper">
+            <div class="avatar" id="home-avatar">👨‍💻</div>
+          </div>
+          <div>
+            <h3 class="user-name" id="home-name">Lucky Royal</h3>
+            <div class="vip-tag">💎 VIP Gold <span style="color:#fff;">🛡️</span></div>
           </div>
         </div>
-        <div class="wallet-actions">
-          <button class="action-btn" onclick="navTo('view-wallet')">
-            <div class="action-icon dep-icon">➕</div>Deposit
-          </button>
-          <button class="action-btn" onclick="navTo('view-wallet')">
-            <div class="action-icon wit-icon">➖</div>Withdraw
-          </button>
+        <div class="bell-icon">🔔<div class="bell-badge">8</div></div>
+      </div>
+
+      <div class="wallet-card">
+        <div class="shield-icon">🛡️</div>
+        <div class="wallet-title">Wallet Balance</div>
+        <div class="wallet-balance-row">
+          <div class="balance-amt">₹ <span id="display-balance">0.00</span></div>
+          <button class="add-btn" onclick="openModal('depositModal')">+</button>
+        </div>
+        <div class="vip-progress">
+          <div class="progress-labels"><span>VIP Progress</span><span>70%</span></div>
+          <div class="progress-bar"><div class="progress-fill"></div></div>
         </div>
       </div>
 
-      <div class="main-content">
-        <div class="sidebar">
-          <div class="side-tab active">
-            <div class="side-icon">🔥</div>Hot
-          </div>
-          <div class="side-tab">
-            <div class="side-icon">🎰</div>Casino
-          </div>
-          <div class="side-tab">
-            <div class="side-icon">🍒</div>Slots
-          </div>
-          <div class="side-tab">
-            <div class="side-icon">⚽</div>Sports
-          </div>
+      <div class="tournament-banner">
+        <div class="trophy-icon">🏆</div>
+        <h2 class="tour-title">DAILY<br>TOURNAMENT</h2>
+        <div class="tour-sub">WIN EXCITING PRIZES</div>
+        <button class="play-now-btn">PLAY NOW</button>
+      </div>
+
+      <div class="trust-badges">
+        <div class="badge"><i style="color:#22c55e;">⚡</i><span>Instant<br>Withdrawals</span></div>
+        <div class="badge"><i style="color:#0ea5e9;">🛡️</i><span>Fair Play<br>Certified</span></div>
+        <div class="badge"><i style="color:#eab308;">🔒</i><span>Secure<br>Payments</span></div>
+      </div>
+
+      <div class="section-header">
+        <h3 class="section-title">Live Winners</h3>
+        <a href="#" class="view-all">View All</a>
+      </div>
+      <div class="winners-scroll">
+        <div class="winner-card">
+          <div class="win-avatar">👨</div>
+          <div class="win-info"><h4>Ravi won</h4><p class="amt">₹ 45,000</p><p class="time">2m ago</p></div>
         </div>
+        <div class="winner-card">
+          <div class="win-avatar">👦</div>
+          <div class="win-info"><h4>Ankit won</h4><p class="amt">₹ 32,000</p><p class="time">5m ago</p></div>
+        </div>
+        <div class="winner-card">
+          <div class="win-avatar">🧔</div>
+          <div class="win-info"><h4>Karan won</h4><p class="amt">₹ 25,000</p><p class="time">7m ago</p></div>
+        </div>
+      </div>
 
-        <div class="game-area">
-          <div class="grid-container">
-            
-            <div class="game-card" onclick="openGame('view-cointoss')">
-              <div class="badge-new">HOT</div>
-              <div class="game-img bg-cointoss">🪙</div>
-              <div class="game-name">Royal Coin Toss</div>
-            </div>
-
-            <div class="game-card" onclick="alert('Wingo is locked. Reach VIP 1 to unlock!')">
-              <div class="game-img bg-wingo">
-                <div style="font-size:30px; position:absolute; top:10px; left:10px;">🔴</div>
-                <div style="font-size:45px; z-index:2; text-shadow:0 0 10px #000;">5</div>
-                <div style="font-size:30px; position:absolute; bottom:10px; right:10px;">🟢</div>
-              </div>
-              <div class="game-name">Wingo Lottery</div>
-            </div>
-
-            <div class="game-card" onclick="alert('Live Roulette loading soon...')">
-              <div class="game-img bg-roulette">🎡</div>
-              <div class="game-name">Live Roulette</div>
-            </div>
-
-            <div class="game-card" onclick="alert('7 Up 7 Down is under maintenance.')">
-              <div class="badge-new" style="background:#00c6ff;">NEW</div>
-              <div class="game-img bg-7up">🎲🎲</div>
-              <div class="game-name">7 Up 7 Down</div>
-            </div>
-
+      <div class="section-header">
+        <h3 class="section-title">Popular Games</h3>
+        <a href="#" class="view-all">View All</a>
+      </div>
+      
+      <div class="games-grid">
+        <div class="game-card" onclick="switchView('view-cointoss')">
+          <div class="game-icon-area bg-coin">🪙</div>
+          <div class="game-name">Royal Coin Toss</div>
+          <div class="game-players">12.4k Playing</div>
+        </div>
+        <div class="game-card" onclick="alert('Wingo Lottery unlocking soon!')">
+          <div class="tag tag-hot">HOT</div>
+          <div class="game-icon-area bg-wingo">
+            <span style="font-size:25px;position:absolute;left:10px;">🔴</span>
+            <span style="font-size:45px;z-index:2;color:#fff;">5</span>
+            <span style="font-size:25px;position:absolute;right:10px;">🟢</span>
           </div>
+          <div class="game-name">Wingo Lottery</div>
+          <div class="game-players">8.7k Playing</div>
+        </div>
+        <div class="game-card" onclick="alert('7 Up 7 Down unlocking soon!')">
+          <div class="game-icon-area bg-dice">🎲</div>
+          <div class="game-name">7 Up 7 Down</div>
+          <div class="game-players">15.6k Playing</div>
+        </div>
+        <div class="game-card" onclick="alert('Live Tables full!')">
+          <div class="tag tag-live">LIVE</div>
+          <div class="game-icon-area bg-roulette">🎡</div>
+          <div class="game-name">Live Roulette</div>
+          <div class="game-players">9.3k Playing</div>
+        </div>
+        <div class="game-card" onclick="alert('Slots Maintenance!')">
+          <div class="game-icon-area bg-slots">🎰</div>
+          <div class="game-name">Slots</div>
+          <div class="game-players">20.1k Playing</div>
+        </div>
+        <div class="game-card" onclick="alert('Sports Betting off-season!')">
+          <div class="game-icon-area bg-sports">⚽</div>
+          <div class="game-name">Sports</div>
+          <div class="game-players">18.2k Playing</div>
         </div>
       </div>
     </div>
 
-    <div id="view-promo" class="view-section">
-      <div class="page-header">PROMOTIONS</div>
-      
-      <div class="info-card" style="border-color: #00f0ff;">
-        <h2 style="color:#00f0ff; margin-top:0;">AGENCY BONUS</h2>
-        <p style="font-size:12px; color:#aaa;">Invite friends and earn up to ₹500 per valid referral + 2% daily commission on their gameplay!</p>
-        <div style="font-size:40px; margin:10px 0;">🤝</div>
-        <button class="big-btn" onclick="alert('Referral Link Copied!')" style="background: linear-gradient(90deg, #00c6ff, #0072ff); color:#fff;">COPY MY LINK</button>
-      </div>
-
-      <div class="info-card">
-        <h2 style="color:var(--gold-mid); margin-top:0;">VIP REWARDS</h2>
-        <p style="font-size:12px; color:#aaa;">Upgrade your VIP level to unlock weekly cashback and exclusive slot machines.</p>
-        <button class="big-btn">VIEW VIP PRIVILEGES</button>
-      </div>
-    </div>
-
-    <div id="view-wallet" class="view-section">
-      <div class="page-header">MY WALLET</div>
-      
-      <div class="info-card" style="background: linear-gradient(45deg, #1a0000, #4a0000);">
-        <div style="font-size:12px; color:#aaa;">Total Balance</div>
-        <div style="font-size:32px; font-weight:900; color:var(--gold-mid); margin:5px 0;">₹<span id="wallet-balance">0.00</span></div>
-      </div>
-
-      <button class="big-btn" onclick="document.getElementById('depositModal').style.display='flex'">📥 DEPOSIT FUNDS</button>
-      <button class="big-btn" style="background: var(--red-gradient); color:#fff;" onclick="alert('Withdrawals temporary paused.')">📤 WITHDRAW CASH</button>
-      
-      <h3 style="margin: 20px 15px 5px; color:var(--gold-mid); font-family:'Cinzel';">Redeem Code</h3>
-      <div style="display:flex; margin:0 15px; gap:10px;">
-        <input type="text" id="coupon-val" class="input-field" placeholder="Enter Gift Code" style="margin:0; width:60%;" />
-        <button class="big-btn" style="margin:0; width:40%; padding:10px;" onclick="applyCoupon()">REDEEM</button>
-      </div>
-    </div>
-
-    <div id="view-account" class="view-section">
-      <div class="page-header">ACCOUNT CENTER</div>
-      
-      <div style="display:flex; align-items:center; gap:15px; padding:20px;">
-        <div class="avatar" style="width:70px; height:70px; font-size:35px;">👨‍💻</div>
-        <div>
-          <h2 style="margin:0; color:#fff;" id="acc-name">Guest User</h2>
-          <p style="margin:5px 0 0; color:#aaa; font-size:12px;" id="acc-id">UID: 24239666</p>
-          <span class="vip-badge" style="display:inline-block; margin-top:5px;">VIP Level 0</span>
-        </div>
-      </div>
-
-      <div style="background: #111; margin: 0 15px; border-radius: 10px; border: 1px solid #333;">
-        <div style="padding:15px; border-bottom: 1px solid #333; display:flex; justify-content:space-between; color:#ddd; font-size:14px; cursor:pointer;" onclick="alert('Loading records...')">
-          <span>📜 Transaction History</span><span>></span>
-        </div>
-        <div style="padding:15px; border-bottom: 1px solid #333; display:flex; justify-content:space-between; color:#ddd; font-size:14px; cursor:pointer;" onclick="alert('Customer Service connecting...')">
-          <span>🎧 24/7 Customer Service</span><span>></span>
-        </div>
-        <div style="padding:15px; display:flex; justify-content:space-between; color:#ddd; font-size:14px; cursor:pointer;" onclick="alert('App is up to date.')">
-          <span>⚙️ Settings & About</span><span>></span>
-        </div>
-      </div>
-    </div>
-
-    <div id="view-cointoss" class="view-section" style="background: radial-gradient(circle at 50% 30%, #3a0005 0%, #1a0000 100%);">
-      
-      <div class="ct-header">
-        <button class="back-btn" onclick="navTo('view-home')">⬅ Back to Lobby</button>
-      </div>
-
+    <div id="view-cointoss" class="view-section">
       <div class="ct-arena">
-        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.6); padding:10px; border-radius:12px; border:1px solid #5a0005;">
-          <div style="text-align:center;">
-            <div class="avatar" style="width:40px;height:40px;margin:0 auto 5px;border-color:#ff3366;">🤖</div>
-            <div style="font-size:11px; color:#fff; font-weight:bold;">System</div>
-          </div>
-          <div style="color:var(--gold-mid); font-family:'Cinzel'; font-size:18px; font-weight:900;">VS</div>
-          <div style="text-align:center;">
-            <div class="avatar" style="width:40px;height:40px;margin:0 auto 5px;">👨‍💻</div>
-            <div style="font-size:11px; color:#fff; font-weight:bold;">You</div>
+        <div class="ct-header">
+          <button class="back-btn" onclick="switchView('view-home')">⬅ Back</button>
+        </div>
+        
+        <div class="vs-box">
+          <div class="player-col"><div class="avt" style="border-color:#ef4444;">🤖</div><div class="nme">System</div></div>
+          <div class="vs-txt">VS</div>
+          <div class="player-col"><div class="avt">👨‍💻</div><div class="nme" id="ct-player-name">You</div></div>
+        </div>
+
+        <div class="coin-wrapper">
+          <div class="coin-3d" id="c-obj">
+            <div class="c-face c-heads">HEADS</div>
+            <div class="c-face c-tails">TAILS</div>
           </div>
         </div>
 
-        <div class="coin-container">
-          <div class="coin" id="coin-obj">
-            <div class="coin-face coin-heads">HEADS</div>
-            <div class="coin-face coin-tails">TAILS</div>
-          </div>
-        </div>
-
-        <div class="status-panel" id="ct-status">AWAITING PREDICTION...</div>
-
-        <div class="bet-controls">
-          <div class="amt-selector">
+        <div class="bottom-controls">
+          <div class="status-msg" id="ct-status">AWAITING PREDICTION...</div>
+          
+          <div class="amt-row">
             <button class="amt-btn" onclick="adjWager(-100)">-</button>
-            <div style="color:var(--gold-mid); font-weight:bold;">₹ <input type="number" id="wager-val" class="amt-input" value="100" readonly/></div>
+            <div style="color:var(--gold-mid); font-weight:800;">₹ <input type="number" id="inp-wager" class="amt-inp" value="100" readonly/></div>
             <button class="amt-btn" onclick="adjWager(100)">+</button>
           </div>
           
-          <div class="side-btns">
-            <button class="s-btn" id="b-heads" onclick="pickSide('heads')">HEADS</button>
-            <button class="s-btn" id="b-tails" onclick="pickSide('tails')">TAILS</button>
+          <div class="side-row">
+            <button class="side-btn" id="btn-heads" onclick="pickSide('heads')">HEADS</button>
+            <button class="side-btn" id="btn-tails" onclick="pickSide('tails')">TAILS</button>
           </div>
           
-          <button class="big-btn" id="btn-play" onclick="playGame()" style="margin:0; width:100%;">TOSS NOW</button>
+          <button class="big-btn" id="btn-play" onclick="playGame()" style="margin:0;">PLAY GLOBAL</button>
         </div>
       </div>
     </div>
 
-
     <div class="bottom-nav">
-      <div class="nav-btn active" onclick="navTo('view-home')">
-        <i>🏠</i><span>Home</span>
+      <div class="nav-item active" onclick="switchView('view-home')">
+        <div class="nav-icon">🏠</div><span>Home</span><div class="nav-indicator"></div>
       </div>
-      <div class="nav-btn" onclick="navTo('view-promo')">
-        <i>⭐</i><span>Promo</span>
+      <div class="nav-item" onclick="alert('Games Directory loading...')">
+        <div class="nav-icon">🎮</div><span>Games</span><div class="nav-indicator"></div>
       </div>
-      <div class="nav-btn" onclick="navTo('view-wallet')">
-        <i>💼</i><span>Deposit</span>
+      <div class="nav-item" onclick="alert('Rewards claiming section coming soon!')">
+        <div class="nav-icon">🎁</div><span>Rewards</span><div class="nav-indicator"></div>
       </div>
-      <div class="nav-btn" onclick="navTo('view-account')">
-        <i>👤</i><span>Account</span>
+      <div class="nav-item" onclick="openModal('depositModal')">
+        <div class="nav-icon">💼</div><span>Wallet</span><div class="nav-indicator"></div>
+      </div>
+      <div class="nav-item" onclick="alert('Profile Settings coming soon!')">
+        <div class="nav-icon">👤</div><span>Profile</span><div class="nav-indicator"></div>
       </div>
     </div>
 
     <div class="modal-overlay" id="loginModal" style="display:flex;">
       <div class="modal-content">
-        <h2 style="color:var(--gold-mid); margin-top:0;">LOGIN</h2>
-        <input type="text" id="inp-name" class="input-field" placeholder="Your Name" />
-        <input type="number" id="inp-phone" class="input-field" placeholder="Mobile Number" />
-        <button class="big-btn" onclick="doLogin()" style="margin: 15px 0 0; width:100%;">ENTER CASINO</button>
+        <div style="font-size:50px; margin-bottom:10px;">👑</div>
+        <h2 style="color:#fff; margin:0 0 5px;">LUCKY ROYAL</h2>
+        <p style="color:var(--text-muted); font-size:12px; margin-bottom:20px;">Create Profile to start earning</p>
+        <input type="text" id="log-name" class="input-field" placeholder="Enter Nickname" />
+        <input type="number" id="log-phone" class="input-field" placeholder="Mobile Number" />
+        <button class="big-btn" onclick="doLogin()">START PLAYING</button>
       </div>
     </div>
 
     <div class="modal-overlay" id="depositModal">
       <div class="modal-content">
-        <h2 style="color:var(--gold-mid); margin-top:0;">DEPOSIT VIA UPI</h2>
-        <input type="number" id="dep-amt" class="input-field" placeholder="Enter Amount (Min 100)" />
-        <button class="big-btn" onclick="alert('UPI Link Generating...'); document.getElementById('depositModal').style.display='none';" style="margin: 15px 0 0; width:100%;">PAY NOW</button>
-        <p style="color:#aaa; font-size:12px; margin-top:15px; cursor:pointer; text-decoration:underline;" onclick="document.getElementById('depositModal').style.display='none'">Cancel</p>
+        <h2 style="color:var(--gold-mid); margin:0 0 15px;">ADD FUNDS</h2>
+        <input type="number" id="dep-amt" class="input-field" placeholder="Enter Amount (₹)" />
+        <button class="big-btn" onclick="submitDeposit()">GENERATE UPI LINK</button>
+        <p style="color:var(--text-muted); font-size:12px; margin-top:15px; cursor:pointer;" onclick="closeModal('depositModal')">Cancel</p>
       </div>
     </div>
 
   </div> <script>
     const socket = io();
     let balance = 0; let wager = 100; let side = null;
-    let uName = localStorage.getItem('rName') || ""; 
-    let uPhone = localStorage.getItem('rPhone') || "";
+    let uName = localStorage.getItem('lrName') || ""; 
+    let uPhone = localStorage.getItem('lrPhone') || "";
+    const MY_UPI_ID = "royalcasino@ybl"; 
 
-    // View Navigation Logic
-    function navTo(viewId) {
+    // SPA Routing
+    function switchView(viewId) {
         document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
         document.getElementById(viewId).classList.add('active');
-        
-        // Update Bottom Nav Highlighting
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        if(viewId === 'view-home') document.querySelectorAll('.nav-btn')[0].classList.add('active');
-        if(viewId === 'view-promo') document.querySelectorAll('.nav-btn')[1].classList.add('active');
-        if(viewId === 'view-wallet') document.querySelectorAll('.nav-btn')[2].classList.add('active');
-        if(viewId === 'view-account') document.querySelectorAll('.nav-btn')[3].classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        if(viewId === 'view-home') document.querySelectorAll('.nav-item')[0].classList.add('active');
     }
 
-    function openGame(gameId) {
-        // Hides bottom nav when in game, shows when back to home
-        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-        document.getElementById(gameId).classList.add('active');
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    }
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    // Login System
+    // Session Management
     window.onload = () => { if(uName && uPhone) { document.getElementById('loginModal').style.display = 'none'; syncUser(); } }
     
     function doLogin() {
-        let n = document.getElementById('inp-name').value; let p = document.getElementById('inp-phone').value;
-        if(!n || !p) return alert('Fill details');
-        localStorage.setItem('rName', n); localStorage.setItem('rPhone', p);
+        let n = document.getElementById('log-name').value; let p = document.getElementById('log-phone').value;
+        if(!n || !p) return alert('Please fill all details!');
+        localStorage.setItem('lrName', n); localStorage.setItem('lrPhone', p);
         uName = n; uPhone = p;
         document.getElementById('loginModal').style.display = 'none';
         syncUser();
     }
 
     function syncUser() {
-        document.getElementById('acc-name').innerText = uName;
-        document.getElementById('acc-id').innerText = "UID: " + uPhone;
+        document.getElementById('home-name').innerText = uName;
+        document.getElementById('ct-player-name').innerText = uName;
         socket.emit('setUserData', { name: uName, phone: uPhone });
     }
 
-    // Balance Updates
-    socket.on('updateBalance', (d) => { 
-        balance = d.newBalance; 
-        document.getElementById('display-balance').innerText = balance + ".00"; 
-        document.getElementById('wallet-balance').innerText = balance + ".00"; 
-    });
+    // Socket Responses
+    socket.on('updateBalance', (d) => { balance = d.newBalance; document.getElementById('display-balance').innerText = balance + ".00"; });
+    socket.on('error', (e) => { alert(e.message); document.getElementById('btn-play').disabled = false; });
 
-    // Coupon logic
-    function applyCoupon() {
-        let c = document.getElementById('coupon-val').value.toUpperCase();
-        if(!c) return; socket.emit('redeemCoupon', { code: c, phone: uPhone, name: uName });
+    // Deposit Logic
+    function submitDeposit() {
+        let amt = parseInt(document.getElementById('dep-amt').value);
+        if(isNaN(amt) || amt < 100) return alert('Minimum deposit ₹100');
+        let upi = `upi://pay?pa=${MY_UPI_ID}&pn=LuckyRoyal&am=${amt}&cu=INR`;
+        window.location.href = upi;
+        setTimeout(() => { alert("Once you pay via UPI app, funds will be requested to Admin."); closeModal('depositModal'); }, 2000);
     }
-    socket.on('couponResult', (d) => { alert(d.message); if(d.status==='success') document.getElementById('coupon-val').value = ''; });
 
-    // Coin Toss Game Logic
-    function adjWager(val) { wager += val; if(wager < 100) wager = 100; document.getElementById('wager-val').value = wager; }
-    function pickSide(s) { side = s; document.getElementById('b-heads').classList.remove('active'); document.getElementById('b-tails').classList.remove('active'); document.getElementById('b-'+s).classList.add('active'); document.getElementById('ct-status').innerText = 'LOCKED: ' + s.toUpperCase(); }
+    // Coin Toss Logic
+    function adjWager(val) { wager += val; if(wager < 100) wager = 100; document.getElementById('inp-wager').value = wager; }
+    function pickSide(s) { side = s; document.getElementById('btn-heads').classList.remove('active'); document.getElementById('btn-tails').classList.remove('active'); document.getElementById('btn-'+s).classList.add('active'); document.getElementById('ct-status').innerText = 'LOCKED: ' + s.toUpperCase(); }
     
     function playGame() {
-        if(!side) return alert('Select Heads or Tails!'); if(wager > balance) return alert('Low Balance!');
-        document.getElementById('btn-play').disabled = true; document.getElementById('ct-status').innerText = 'TOSSING...';
+        if(!side) return alert('Select Heads or Tails!'); if(wager > balance) return alert('Insufficient Balance!');
+        document.getElementById('btn-play').disabled = true; document.getElementById('ct-status').innerText = 'SEARCHING LOBBY...';
         socket.emit('placeBet', { side: side, amount: wager, phone: uPhone, name: uName });
     }
 
-    socket.on('matchmakingStarted', () => { document.getElementById('coin-obj').className = 'coin flipping'; });
+    socket.on('matchmakingStarted', () => { 
+      document.getElementById('ct-status').innerText = 'TOSSING...';
+      document.getElementById('c-obj').className = 'coin-3d flipping'; 
+    });
     
     socket.on('gameResult', (d) => {
-        const c = document.getElementById('coin-obj');
-        c.className = d.tossResult === 'heads' ? 'coin coin-stop-heads' : 'coin coin-stop-tails';
+        const c = document.getElementById('c-obj');
+        c.className = d.tossResult === 'heads' ? 'coin-3d stop-h' : 'coin-3d stop-t';
         setTimeout(() => {
-            document.getElementById('ct-status').innerText = d.status === 'won' ? '🎉 YOU WON!' : '❌ YOU LOST!';
-            document.getElementById('ct-status').style.color = d.status === 'won' ? '#00ff99' : '#ff3366';
+            document.getElementById('ct-status').innerText = d.status === 'won' ? '🎉 YOU WON DOUBLE!' : '❌ YOU LOST';
+            document.getElementById('ct-status').style.color = d.status === 'won' ? '#22c55e' : '#ef4444';
             setTimeout(() => { 
                 document.getElementById('ct-status').innerText = 'AWAITING PREDICTION...'; 
                 document.getElementById('ct-status').style.color = 'var(--gold-light)';
@@ -455,9 +410,6 @@
             }, 3000);
         }, 600);
     });
-
-    socket.on('error', (e) => { alert(e.message); document.getElementById('btn-play').disabled = false; });
   </script>
-
 </body>
 </html>
