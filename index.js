@@ -9,11 +9,19 @@ const app = express();
 app.use(cors());
 app.use(express.static(__dirname));
 
-// ✅ DATABASE CONNECTION
+// ✅ SCALABILITY UPGRADE: Crash Protection (Prevents server from stopping on minor errors)
+process.on('uncaughtException', (err) => console.log("[System Warning] Caught exception: ", err));
+process.on('unhandledRejection', (err) => console.log("[System Warning] Caught rejection: ", err));
+
+// ✅ SCALABILITY UPGRADE: MongoDB High Concurrency Connection
 const dbURI = "mongodb+srv://royaladmin:royal123@cluster0.xdnwkjr.mongodb.net/royalcasino?retryWrites=true&w=majority";
 
-mongoose.connect(dbURI, { maxPoolSize: 10, serverSelectionTimeoutMS: 10000 })
-.then(() => console.log("✅ MongoDB Database Connected Successfully!"))
+mongoose.connect(dbURI, { 
+    maxPoolSize: 50, // Pehle 10 tha, ab 50 ek sath queries process hongi
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000 // Slow internet walo ke connection zinda rakhega
+})
+.then(() => console.log("✅ MongoDB High-Concurrency DB Connected!"))
 .catch((err) => console.log("❌ Database Connection Error: ", err));
 
 const txSchema = new mongoose.Schema({
@@ -38,7 +46,7 @@ const Player = mongoose.model('Player', playerSchema);
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
-// 👑 SECRET ADMIN PANEL ROUTE (Added Refresh Button)
+// 👑 SECRET ADMIN PANEL ROUTE
 app.get('/admin-secret-panel', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -106,20 +114,16 @@ app.get('/admin-secret-panel', (req, res) => {
                 function verifyPassword() { if(document.getElementById('admin-pass').value === 'Royal@123') { document.getElementById('login-screen').style.display='none'; document.getElementById('dashboard-screen').style.display='block'; socket.emit('registerAdmin'); } else { document.getElementById('login-err').style.display = 'block'; } }
                 function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.tab-btn:not(.refresh-btn)').forEach(b=>b.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); }
                 
-                // Refresh Data Function
                 function refreshAdminData() {
-                    socket.emit('registerAdmin'); // Re-fetches all latest data
+                    socket.emit('registerAdmin'); 
                     let btn = document.querySelector('.refresh-btn');
                     btn.innerText = "⏳ FETCHING...";
                     setTimeout(() => { btn.innerText = "🔄 REFRESH DATA"; }, 1000);
                 }
 
                 socket.on('adminViewRequests', (reqs) => { const c = document.getElementById('deposits-container'); c.innerHTML=''; if(Object.keys(reqs).length === 0) c.innerHTML = '<p style="color:#aaa;">No pending deposits.</p>'; for(let id in reqs) { c.innerHTML += \`<div class="req-card"><p><strong>Player:</strong> \${reqs[id].name} (\${reqs[id].phone})</p><p><strong>Amount:</strong> ₹\${reqs[id].amount} | UTR: <span style="color:#ffd700;">\${reqs[id].utr}</span></p><div style="margin-top:15px;"><button class="action app-btn" onclick="socket.emit('adminDepAction',{requestId:'\${id}',action:'approve'})">APPROVE</button><button class="action rej-btn" onclick="socket.emit('adminDepAction',{requestId:'\${id}',action:'reject'})">REJECT</button></div></div>\`; } });
-                
                 socket.on('adminViewWithdrawals', (wits) => { const c = document.getElementById('withdrawals-container'); c.innerHTML=''; if(Object.keys(wits).length === 0) c.innerHTML = '<p style="color:#aaa;">No pending withdrawals.</p>'; for(let id in wits) { c.innerHTML += \`<div class="req-card" style="border-color:#ff3366;"><p><strong>Player:</strong> \${wits[id].name} (\${wits[id].phone})</p><p><strong>Amount:</strong> <span style="color:#00ff99;">₹\${wits[id].amount}</span> | UPI: <span style="color:#ffd700;">\${wits[id].upi}</span></p><div style="margin-top:15px;"><button class="action app-btn" onclick="socket.emit('adminWithAction',{requestId:'\${id}',action:'approve'})">PAID</button><button class="action rej-btn" onclick="socket.emit('adminWithAction',{requestId:'\${id}',action:'reject'})">REFUND</button></div></div>\`; } });
-                
                 socket.on('adminViewSupport', (tickets) => { const c = document.getElementById('support-container'); c.innerHTML=''; if(Object.keys(tickets).length === 0) c.innerHTML = '<p style="color:#aaa;">No active support tickets.</p>'; for(let id in tickets) { c.innerHTML += \`<div class="req-card" style="border-color:#00b4db;"><p><strong>Player:</strong> \${tickets[id].name} (\${tickets[id].phone})</p><p style="color:#aaa; font-size:12px;">\${tickets[id].date}</p><p style="background:#000; padding:10px; border-radius:5px; border-left:3px solid #00b4db; margin-top:10px;">\${tickets[id].message}</p><button class="action resolve-btn" onclick="socket.emit('adminResolveTicket',{ticketId:'\${id}'})">✅ MARK RESOLVED</button></div>\`; } });
-                
                 socket.on('adminViewPlayers', (list) => { const t = document.getElementById('players-table'); t.innerHTML=''; list.forEach(p=>{ let lostAmount = p.totalLost || 0; t.innerHTML+=\`<tr><td>\${p.name}</td><td>\${p.phone}</td><td style="color:#ffd700; font-weight:bold;">₹\${p.balance}</td><td>\${p.matchesPlayed}</td><td style="color:#00ff99; font-weight:bold;">₹\${p.totalWon}</td><td style="color:#ff3366; font-weight:bold;">₹\${lostAmount}</td></tr>\`; }); });
             </script>
         </body>
@@ -136,6 +140,19 @@ let pendingWithdrawals = {};
 let pendingSupport = {}; 
 let rooms = {};
 let adminSocketId = null;
+
+// ✅ SCALABILITY UPGRADE: Anti-Spam Rate Limiting State
+let rateLimits = {};
+
+function isSpam(socketId, action, cooldownMs) {
+    if (!rateLimits[socketId]) rateLimits[socketId] = {};
+    const now = Date.now();
+    if (rateLimits[socketId][action] && (now - rateLimits[socketId][action] < cooldownMs)) {
+        return true; // Request blocked
+    }
+    rateLimits[socketId][action] = now;
+    return false; // Request allowed
+}
 
 const firstNames = ["Rahul", "Vikram", "Aarav", "Priya", "Neha", "Kabir", "Amit", "Raj", "Karan", "Rohan", "Anjali", "Ravi", "Suresh", "Ramesh", "Sunil", "Vikas", "Pooja", "Kavita", "Sanjay", "Ajay", "Vijay", "Anita", "Sunita", "Deepak", "Manoj", "Anil", "Mukesh", "Dinesh", "Gaurav", "Saurabh", "Ashish", "Manish", "Nitin", "Sachin", "Vishal", "Yogesh", "Pankaj", "Tarun", "Varun", "Arun", "Akash", "Rishabh", "Shubham", "Abhishek", "Aditya", "Nikhil", "Prashant", "Sumit", "Mohit", "Rohit"];
 const tags = ["_Pro", "_King", "_Ace", "_777", "_007", "_Win", "_Casino", "_HighRoller", "_Bet", "_Spins", "_99", "_Master", "_Gamer", "_Vip", "_Boss", "_Lucky", "_Don", "_Shark", "_Star", "_Ninja"];
@@ -170,6 +187,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('setUserData', async (data) => {
+        if(isSpam(socket.id, 'setUserData', 1000)) return; // Prevents rapid re-logins
         let user = await getAndUpdateUser(data.phone, data.name);
         if(user) {
             socket.emit('updateBalance', { newBalance: user.balance });
@@ -179,6 +197,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('submitSupportTicket', async (data) => {
+        if (isSpam(socket.id, 'support', 5000)) return socket.emit('error', { message: 'Please wait before sending another ticket.' });
         if(!data.phone) return;
         let u = await Player.findOne({ phone: data.phone });
         if(u) {
@@ -207,6 +226,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('submitManualDeposit', async (data) => { 
+        if (isSpam(socket.id, 'deposit', 5000)) return socket.emit('error', { message: 'Too many requests. Please wait.' });
         if(!data.phone) return;
         let u = await getAndUpdateUser(data.phone, "Player");
         if(u) {
@@ -242,6 +262,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('withdrawFunds', async (data) => {
+        if (isSpam(socket.id, 'withdraw', 5000)) return socket.emit('error', { message: 'Processing previous request...' });
         if(!data.phone) return;
         let u = await getAndUpdateUser(data.phone, "Player");
         if(u && u.balance >= data.amount) {
@@ -280,6 +301,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('cancelWithdrawal', async (data) => {
+        if (isSpam(socket.id, 'cancelWith', 2000)) return;
         if(!data.phone) return;
         let u = await Player.findOne({ phone: data.phone });
         if(u) {
@@ -299,6 +321,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('redeemCoupon', async (data) => {
+        if (isSpam(socket.id, 'coupon', 3000)) return socket.emit('couponResult', { status: 'error', message: 'Wait a moment...' });
         if(!data.phone) return socket.emit('couponResult', { status: 'error', message: '❌ Invalid Session! Please refresh the page.' });
         if(data.code === 'ROYAL20K') {
             let user = await getAndUpdateUser(data.phone, data.name);
@@ -320,6 +343,9 @@ io.on('connection', (socket) => {
 
     // 🎲 GLOBAL MATCH TOSS
     socket.on('placeBet', async (data) => {
+        // ✅ ANTI-SPAM: Blocks rapidly fired game requests
+        if (isSpam(socket.id, 'placeBet', 3000)) return socket.emit('error', { message: 'Too many requests! Game is processing.' });
+        
         if(!data.phone) return socket.emit('error', { message: 'Session Error! Refresh page.' });
         let u = await getAndUpdateUser(data.phone, data.name);
         if(!u || u.balance < data.amount) return socket.emit('error', { message: 'Insufficient balance!' });
@@ -356,6 +382,7 @@ io.on('connection', (socket) => {
 
     // ⚔️ PVP FRIENDS CORE ENGINE
     socket.on('createRoom', async (data) => {
+        if (isSpam(socket.id, 'room', 2000)) return;
         if(!data.phone) return;
         let u = await getAndUpdateUser(data.phone);
         if(!u || u.balance < data.amount) return socket.emit('error', { message: 'Balance low!' });
@@ -367,6 +394,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('joinRoom', async (data) => {
+        if (isSpam(socket.id, 'room', 2000)) return;
         let room = rooms[data.code];
         if(!room || room.guest || socket.id === room.host) return socket.emit('error', { message: 'Invalid Room!' });
         if(!data.phone) return; 
@@ -430,6 +458,7 @@ io.on('connection', (socket) => {
     }
 
     socket.on('pvpRequestRematch', () => {
+        if (isSpam(socket.id, 'rematch', 2000)) return;
         let code = players[socket.id] ? players[socket.id].currentRoom : null; let room = rooms[code]; if(!room) return;
         let targetId = (socket.id === room.host) ? room.guest : room.host; io.to(targetId).emit('pvpPromptRematchInvite');
     });
@@ -456,8 +485,10 @@ io.on('connection', (socket) => {
         let code = players[socket.id] ? players[socket.id].currentRoom : null; if(code && rooms[code]) { io.to(code).emit('pvpRoomClosedNotify', 'Lobby closed.'); delete rooms[code]; }
     });
 
+    // ✅ CLEANUP: Remove rate limit memory when user disconnects to save RAM
     socket.on('disconnect', () => { 
         delete players[socket.id]; 
+        delete rateLimits[socket.id];
     });
 });
 
