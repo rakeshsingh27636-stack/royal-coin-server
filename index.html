@@ -3,413 +3,646 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Lucky Royal Premium</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/jpeg" href="icon.jpg">
+  <link rel="apple-touch-icon" href="icon.jpg">
+  <meta name="theme-color" content="#120002">
+  <title>Royal Casino Coin Toss</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
   
-  <style>
-    /* 🎨 ULTRA PREMIUM 3D COLOR PALETTE */
-    :root { 
-      --bg-main: #090c15; 
-      --bg-card: #141b2d;
-      --bg-card-hover: #1e293b;
-      --gold-light: #fcf6ba;
-      --gold-mid: #bf953f;
-      --gold-dark: #b38728;
-      --text-main: #ffffff;
-      --text-muted: #94a3b8;
-      --accent-blue: #3b82f6;
-      --neon-blue: #00f0ff;
-      --gold-gradient: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          console.log('Service Worker Registered!', reg);
+        }).catch(err => {
+          console.log('Service Worker Failed:', err);
+        });
+      });
     }
-    
-    * { box-sizing: border-box; font-family: 'Poppins', sans-serif; user-select: none; }
-    body { background: #000; margin: 0; color: var(--text-main); display: flex; justify-content: center; }
-    
-    /* 📱 MOBILE APP CONTAINER */
-    .app-container { width: 100%; max-width: 400px; height: 100vh; background: var(--bg-main); display: flex; flex-direction: column; overflow: hidden; position: relative; }
-    ::-webkit-scrollbar { display: none; }
+  </script>
 
-    /* --- 👑 TOP HEADER --- */
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px 10px; }
-    .profile-info { display: flex; align-items: center; gap: 12px; }
-    .avatar-wrapper { position: relative; }
-    .avatar { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--gold-mid); background: #000; display: flex; justify-content: center; align-items: center; font-size: 24px; box-shadow: 0 0 10px rgba(191, 149, 63, 0.4); }
-    .user-name { font-size: 16px; font-weight: 800; color: #fff; margin: 0; letter-spacing: 0.5px; }
-    .vip-tag { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--gold-light); font-weight: 600; background: rgba(191, 149, 63, 0.15); padding: 2px 8px; border-radius: 10px; width: max-content; margin-top: 2px; border: 1px solid rgba(191,149,63,0.3); }
-    .bell-icon { position: relative; width: 40px; height: 40px; background: var(--bg-card); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; border: 1px solid rgba(255,255,255,0.05); }
-    .bell-badge { position: absolute; top: 0; right: 0; background: #ef4444; color: #fff; font-size: 10px; font-weight: bold; width: 16px; height: 16px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 2px solid var(--bg-main); }
+  <style>
+    :root { --gold-royal: #ffd700; --gold-light: #fffde7; --gold-dark: #b8860b; --burgundy-dark: #0a0001; --burgundy-light: #250006; }
+    body { font-family: 'Montserrat', sans-serif; background: var(--burgundy-dark); background-image: radial-gradient(circle at 50% 30%, var(--burgundy-light) 0%, var(--burgundy-dark) 100%); color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; box-sizing: border-box; }
+    h1, h2, .vs-text, .header { font-family: 'Cinzel', serif; }
+    #bg-coins-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 1; }
+    .bg-coin { position: absolute; width: 25px; height: 25px; background: radial-gradient(circle at 30% 30%, #fffde7 0%, #ffd700 40%, #b8860b 100%); border-radius: 50%; border: 1px solid #daa520; opacity: 0.2; animation: floatCoin infinite linear alternate; }
+    @keyframes floatCoin { 0% { transform: translateY(0) scale(1) rotateY(0deg); } 100% { transform: translateY(-40px) scale(1.1) rotateY(180deg); } }
+    .mobile-app { width: 100%; max-width: 400px; height: 100vh; background: linear-gradient(180deg, rgba(20,0,2,0.95) 0%, rgba(5,0,0,0.95) 100%); border: 2px solid rgba(255, 215, 0, 0.2); padding: 15px 20px; box-sizing: border-box; box-shadow: inset 0 0 50px rgba(255, 215, 0, 0.05); display: flex; flex-direction: column; justify-content: space-between; position: relative; z-index: 10; backdrop-filter: blur(10px); }
+    #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+    .header h1 { margin: 0; font-size: 28px; color: var(--gold-royal); text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 2px 0 #8a5a19; letter-spacing: 2px; text-align: center; }
+    .fair-badge { font-family: 'Montserrat', sans-serif; font-size: 10px; color: #00ff99; text-align: center; margin-top: 4px; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 5px rgba(0,255,153,0.5); }
+    .top-balance-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background: linear-gradient(90deg, rgba(30,0,5,0.8), rgba(0,0,0,0.8)); padding: 8px 12px; border-radius: 12px; border: 1px solid var(--gold-dark); }
+    .account-label { font-size: 11px; color: #ccc; text-transform: uppercase; font-weight: bold;}
+    .balance-display { font-family: 'Montserrat', sans-serif; font-size: 18px; color: var(--gold-royal); font-weight: 900; text-shadow: 0 0 10px rgba(255,215,0,0.6);}
+    .funds-nav-btn { background: linear-gradient(180deg, #fffde7 0%, #ffd700 40%, #b8860b 100%); border: 2px solid #fff; color: #3a2700; padding: 6px 14px; border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 900; cursor: pointer; box-shadow: 0 5px 15px rgba(255,215,0,0.4); text-shadow: 0 1px 0 rgba(255,255,255,0.5); transition: 0.3s;}
+    .vs-panel { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--gold-dark); border-radius: 15px; padding: 10px 12px; margin-top: 8px; }
+    .profile { text-align: center; width: 42%; }
+    .avatar { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--gold-royal); box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: #150002; }
+    .bot-avatar { border-color: #ff3366; box-shadow: 0 0 15px rgba(255, 51, 102, 0.4); }
+    .name { font-size: 13px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Montserrat', sans-serif;}
+    .vs-text { font-size: 20px; color: var(--gold-royal); font-style: italic; text-shadow: 0 0 8px rgba(255,215,0,0.5);}
+    .coin-container { perspective: 1200px; display: flex; justify-content: center; align-items: center; flex-grow: 1; min-height: 150px; }
+    .coin { width: 155px; height: 155px; position: relative; transform-style: preserve-3d; border-radius: 50%; box-shadow: 0 25px 40px rgba(0,0,0,0.9); }
+    .coin-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-size: 32px; font-weight: 900; border: 10px solid #c59b00; box-sizing: border-box; box-shadow: inset 0 0 30px rgba(255,255,255,0.5), inset 0 0 50px rgba(184, 134, 11, 0.9); }
+    .coin-heads { background: radial-gradient(circle at 30% 30%, #ffffff 0%, #ffd700 30%, #aa7a00 100%); color: #3a2700; transform: rotateY(0deg); }
+    .coin-tails { background: radial-gradient(circle at 30% 30%, #ffffff 0%, #dcdcdc 40%, #888888 100%); color: #111; border-color: #a0a0a0; transform: rotateY(180deg); }
+    .coin.flipping { animation: spinCoin 0.18s infinite linear; }
+    @keyframes spinCoin { 0% { transform: rotateY(0deg) translateY(0); } 50% { transform: rotateY(180deg) translateY(-25px); } 100% { transform: rotateY(360deg) translateY(0); } }
+    .coin-stop-heads { transform: rotateY(0deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .coin-stop-tails { transform: rotateY(180deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .result-panel { background: rgba(0,0,0,0.8); border: 1px solid var(--gold-dark); border-radius: 12px; padding: 10px; text-align: center; min-height: 38px; font-family: 'Montserrat', sans-serif; font-weight: bold; font-size: 15px; color: var(--gold-royal); margin-bottom: 10px; }
+    .result-panel.win { border-color: #00ff99; color: #00ff99; background: rgba(0, 255, 153, 0.1); }
+    .result-panel.loss { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); }
+    .controls { background: linear-gradient(180deg, rgba(20,0,5,0.8), rgba(0,0,0,0.9)); border: 2px solid var(--gold-dark); border-radius: 18px; padding: 12px; }
+    .wager-selector { display: flex; justify-content: space-between; align-items: center; background: #000; border: 2px solid #555; border-radius: 10px; padding: 6px 12px; margin-bottom: 12px; }
+    .wager-btn { background: transparent; border: none; color: var(--gold-royal); font-size: 28px; font-weight: bold; cursor: pointer; padding: 0 10px;}
+    .wager-value { font-family: 'Montserrat', sans-serif; font-size: 17px; color: var(--gold-royal); font-weight: bold;}
+    #wager-input { background: transparent; border: none; border-bottom: 2px dashed var(--gold-royal); color: var(--gold-royal); font-family: 'Montserrat', sans-serif; font-size: 20px; font-weight: 900; width: 75px; text-align: center; outline: none; }
+    .side-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .side-btn { flex: 1; padding: 12px 0; background: linear-gradient(180deg, #1a1a1a, #000); border: 2px solid var(--gold-dark); border-radius: 8px; font-family: 'Cinzel', serif; font-size: 16px; font-weight: 900; color: var(--gold-royal); cursor: pointer; }
+    .side-btn.selected { background: linear-gradient(180deg, #fffde7 0%, #ffd700 50%, #b8860b 100%); color: #2b1d00; border-color: #fff; }
+    .action-btn { width: 100%; padding: 14px; border: 2px solid #fff; border-radius: 8px; background: linear-gradient(180deg, #fffde7 0%, #ffd700 40%, #996515 100%); color: #2b1d00; font-family: 'Cinzel', serif; font-size: 18px; font-weight: 900; text-transform: uppercase; cursor: pointer; letter-spacing: 1px;}
+    .pvp-btn { width: 100%; padding: 10px; border: 1px solid #00f0ff; border-radius: 8px; background: rgba(0,240,255,0.1); color: #00f0ff; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: bold; text-transform: uppercase; cursor: pointer; margin-top:8px;}
+    @keyframes superGlitter { 0% { box-shadow: 0 0 5px #ffd700, inset 0 0 5px #ffd700; border-color: #ffd700; } 50% { box-shadow: 0 0 30px #fff, inset 0 0 15px #ffd700; border-color: #fff; transform: scale(1.02); } 100% { box-shadow: 0 0 5px #ffd700, inset 0 0 5px #ffd700; border-color: #ffd700; } }
+    .glitter-active { animation: superGlitter 1s infinite alternate !important; border-color: #fff !important; }
+    .live-ticker-patti { background: linear-gradient(90deg, rgba(255,215,0,0.05), rgba(0,0,0,0.9), rgba(255,215,0,0.05)); border-top: 1px solid rgba(255, 215, 0, 0.3); height: 26px; overflow: hidden; display: flex; align-items: center; margin-top: 10px; border-radius: 5px; }
+    .ticker-wrap { width: 100%; overflow: hidden; white-space: nowrap; }
+    .ticker-text { display: inline-block; padding-left: 100%; font-size: 12px; font-weight: bold; color: #00ff99; font-family: 'Montserrat', sans-serif; animation: marquee 12s infinite linear; }
+    @keyframes marquee { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+    .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 100; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(8px); }
+    .modal-card { width: 100%; background: #1a0003; border: 2px solid var(--gold-royal); border-radius: 20px; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(255,215,0,0.4); max-height: 90vh; overflow-y: auto;}
+    .modal-row { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+    .hub-btn { padding: 14px; border: 1px solid #fff; border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+    .deposit-btn { background: linear-gradient(90deg, #00b4db, #00ff99); color: #000; text-decoration: none;}
+    .withdraw-btn { background: linear-gradient(90deg, #ff416c, #ff4b2b); color: #fff;}
+    .history-btn { background: linear-gradient(90deg, #333, #555); color: #ffd700; border: 1px solid #ffd700; }
+    .close-modal { color: var(--gold-royal); font-size: 12px; margin-top: 20px; cursor: pointer; text-decoration: underline; text-transform: uppercase;}
+    .login-input { padding: 12px; background: #000; border: 1px solid var(--gold-royal); color: var(--gold-royal); font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: bold; text-align: center; border-radius: 5px; width: 90%; margin: 0 auto; outline: none; }
+    .lock-icon { font-size: 40px; margin-bottom: 15px; }
 
-    /* --- 💳 3D WALLET CARD --- */
-    .wallet-card { margin: 15px 20px; background: linear-gradient(135deg, #1a2235 0%, #0d121f 100%); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
-    .wallet-title { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 5px; }
-    .wallet-balance-row { display: flex; align-items: center; gap: 15px; }
-    .balance-amt { font-size: 28px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 5px; }
-    .add-btn { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, #3b82f6, #2563eb); border: none; color: #fff; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4); display: flex; justify-content: center; align-items: center; }
-    .vip-progress { margin-top: 15px; display: flex; flex-direction: column; gap: 5px; }
-    .progress-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); font-weight: 600; }
-    .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; }
-    .progress-fill { width: 70%; height: 100%; background: var(--gold-gradient); border-radius: 10px; box-shadow: 0 0 10px rgba(191, 149, 63, 0.5); }
-    .shield-icon { position: absolute; right: 10px; top: 10px; font-size: 75px; opacity: 0.9; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5)); }
-
-    /* --- 🎁 DAILY TOURNAMENT BANNER --- */
-    .tournament-banner { margin: 0 20px 15px; border-radius: 16px; background: linear-gradient(135deg, #2a145a 0%, #110826 100%); padding: 20px; position: relative; border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 10px 25px rgba(0,0,0,0.5); overflow: hidden; }
-    .tour-title { font-size: 18px; font-weight: 800; color: var(--gold-light); margin: 0; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-    .tour-sub { font-size: 11px; color: #e2e8f0; font-weight: 600; margin: 5px 0 15px; }
-    .play-now-btn { background: var(--gold-gradient); color: #000; border: none; padding: 8px 20px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(191, 149, 63, 0.4); }
-    .trophy-icon { position: absolute; right: -10px; top: -10px; font-size: 90px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.8)); }
-
-    /* --- 🛡️ TRUST BADGES --- */
-    .trust-badges { display: flex; justify-content: space-between; margin: 0 20px 20px; }
-    .badge { display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 10px; border-radius: 12px; flex: 1; margin: 0 4px; justify-content: center; border: 1px solid rgba(255,255,255,0.02); }
-    .badge:first-child { margin-left: 0; }
-    .badge:last-child { margin-right: 0; }
-    .badge i { font-size: 16px; }
-    .badge span { font-size: 9px; font-weight: 600; color: var(--text-muted); text-align: left; line-height: 1.2; }
-
-    /* --- 🏆 LIVE WINNERS --- */
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin: 0 20px 10px; }
-    .section-title { font-size: 14px; font-weight: 800; color: #fff; margin: 0; }
-    .view-all { font-size: 12px; color: var(--neon-blue); font-weight: 600; text-decoration: none; cursor: pointer; }
-    
-    .winners-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 0 20px 20px; scroll-snap-type: x mandatory; }
-    .winner-card { min-width: 140px; background: var(--bg-card); border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 10px; scroll-snap-align: start; border: 1px solid rgba(255,255,255,0.03); }
-    .win-avatar { width: 35px; height: 35px; border-radius: 50%; background: #333; display: flex; justify-content: center; align-items: center; font-size: 18px; }
-    .win-info h4 { margin: 0; font-size: 10px; color: var(--text-muted); font-weight: 600; }
-    .win-info .amt { margin: 0; font-size: 13px; color: var(--gold-mid); font-weight: 800; }
-    .win-info .time { margin: 0; font-size: 9px; color: #64748b; }
-
-    /* --- 🎮 6 GAMES GRID --- */
-    .games-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 20px 100px; }
-    .game-card { background: var(--bg-card); border-radius: 16px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; padding-bottom: 10px; }
-    .game-card:active { transform: scale(0.95); background: var(--bg-card-hover); }
-    .game-icon-area { width: 100%; height: 85px; display: flex; justify-content: center; align-items: center; font-size: 55px; position: relative; }
-    
-    /* 3D Game Icon Backgrounds */
-    .bg-coin { background: radial-gradient(circle, #2d2613, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
-    .bg-wingo { background: radial-gradient(circle, #1e3a5f, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
-    .bg-dice { background: radial-gradient(circle, #2d1b3a, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
-    .bg-roulette { background: radial-gradient(circle, #3a1b1b, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
-    .bg-slots { background: radial-gradient(circle, #3a2b1b, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
-    .bg-sports { background: radial-gradient(circle, #1b3a2a, #11141d); text-shadow: 0 10px 15px rgba(0,0,0,0.8); }
-    
-    .game-name { font-size: 11px; font-weight: 800; color: #fff; margin: 8px 0 2px; text-align: center; }
-    .game-players { font-size: 9px; color: var(--text-muted); font-weight: 600; text-align: center; }
-    .tag { position: absolute; top: 0; right: 0; padding: 2px 6px; font-size: 8px; font-weight: 800; color: #fff; border-bottom-left-radius: 8px; }
-    .tag-hot { background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.5); }
-    .tag-live { background: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.5); }
-
-    /* --- 🧭 MODERN BOTTOM NAV --- */
-    .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 400px; height: 70px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
-    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; width: 20%; gap: 4px; position: relative; }
-    .nav-item.active { color: var(--gold-mid); }
-    .nav-icon { font-size: 22px; transition: 0.3s; }
-    .nav-item.active .nav-icon { transform: translateY(-3px); filter: drop-shadow(0 0 5px rgba(191,149,63,0.8)); }
-    .nav-indicator { position: absolute; bottom: -12px; width: 20px; height: 3px; background: var(--neon-blue); border-radius: 5px; opacity: 0; transition: 0.3s; box-shadow: 0 -2px 10px var(--neon-blue); }
-    .nav-item.active .nav-indicator { opacity: 1; bottom: -8px; }
-
-    /* --- 🖥️ VIEW SECTIONS & MODALS --- */
-    .view-section { display: none; width: 100%; height: 100%; overflow-y: auto; flex-direction: column; }
-    .view-section.active { display: block; }
-    
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px); }
-    .modal-content { background: var(--bg-card); border: 1px solid rgba(191,149,63,0.3); border-radius: 20px; padding: 25px; width: 100%; max-width: 320px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
-    .input-field { width: 100%; padding: 14px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 10px; text-align: center; outline: none; font-weight: bold; font-family: 'Poppins'; }
-    .input-field:focus { border-color: var(--gold-mid); }
-    .big-btn { width: 100%; margin: 15px 0 0; padding: 14px; border-radius: 10px; border: none; background: var(--gold-gradient); color: #000; font-weight: 800; font-size: 14px; cursor: pointer; box-shadow: 0 5px 15px rgba(191, 149, 63, 0.4); }
-
-    /* --- 🪙 ROYAL COIN TOSS ENGINE UI --- */
-    .ct-arena { height: 100vh; background: radial-gradient(circle at center, #1a2235, var(--bg-main)); display: flex; flex-direction: column; }
-    .ct-header { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .back-btn { background: var(--bg-card); color: #fff; border: 1px solid #333; padding: 8px 15px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; }
-    .vs-box { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); margin: 20px; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
-    .player-col { text-align: center; }
-    .player-col .avt { width: 50px; height: 50px; border-radius: 50%; background: #000; border: 2px solid var(--gold-mid); display: flex; justify-content: center; align-items: center; font-size: 24px; margin: 0 auto 5px; }
-    .player-col .nme { font-size: 12px; font-weight: 800; color: #fff; }
-    .vs-txt { font-size: 24px; font-weight: 900; background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    
-    .coin-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; perspective: 1200px; }
-    .coin-3d { width: 160px; height: 160px; position: relative; transform-style: preserve-3d; border-radius: 50%; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
-    .c-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Poppins'; font-size: 26px; font-weight: 900; border: 10px solid #b38728; }
-    .c-heads { background: radial-gradient(circle, #fff, #fcf6ba, #aa771c); color: #3a2700; transform: rotateY(0deg); }
-    .c-tails { background: radial-gradient(circle, #fff, #cbd5e1, #64748b); color: #0f172a; border-color: #94a3b8; transform: rotateY(180deg); }
-    .flipping { animation: flipAnim 0.18s infinite linear; }
-    @keyframes flipAnim { 0% { transform: rotateY(0deg); } 50% { transform: rotateY(180deg) translateY(-30px); } 100% { transform: rotateY(360deg); } }
-    .stop-h { transform: rotateY(0deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    .stop-t { transform: rotateY(180deg); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
-    .bottom-controls { background: var(--bg-card); border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
-    .status-msg { text-align: center; font-size: 14px; font-weight: 800; color: var(--gold-light); margin-bottom: 15px; }
-    .amt-row { display: flex; justify-content: space-between; align-items: center; background: #000; padding: 8px 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
-    .amt-btn { background: none; border: none; color: var(--gold-mid); font-size: 24px; font-weight: bold; cursor: pointer; }
-    .amt-inp { background: none; border: none; color: #fff; font-size: 20px; font-weight: 800; width: 100px; text-align: center; outline: none; }
-    .side-row { display: flex; gap: 12px; margin-bottom: 15px; }
-    .side-btn { flex: 1; padding: 14px; background: #000; color: var(--text-muted); border: 2px solid #333; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; }
-    .side-btn.active { background: rgba(191,149,63,0.1); color: var(--gold-light); border-color: var(--gold-mid); box-shadow: 0 0 15px rgba(191, 149, 63, 0.2); }
+    .tx-item { background: #250006; border: 1px solid var(--gold-dark); border-radius: 8px; padding: 12px; margin-bottom: 10px; text-align: left; }
+    .tx-header { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;}
+    .tx-date { font-size: 10px; color: #aaa; }
+    .tx-stat { font-size: 12px; font-weight: bold; margin-top: 5px;}
+    .cancel-tx-btn { background: #ff3366; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-family: 'Montserrat'; font-size: 10px; font-weight: bold; margin-top: 5px; }
   </style>
 </head>
 <body>
-
-  <div class="app-container">
-
-    <div id="view-home" class="view-section active">
-      
-      <div class="header">
-        <div class="profile-info">
-          <div class="avatar-wrapper">
-            <div class="avatar" id="home-avatar">👨‍💻</div>
-          </div>
-          <div>
-            <h3 class="user-name" id="home-name">Lucky Royal</h3>
-            <div class="vip-tag">💎 VIP Gold <span style="color:#fff;">🛡️</span></div>
-          </div>
+  <div id="bg-coins-container"></div>
+  <div class="mobile-app">
+    
+    <div class="modal-overlay" id="login-screen" style="display:flex;">
+      <div class="modal-card">
+        <div class="logo-coin" id="login-icon" style="font-size:60px; margin-bottom:10px;">🪙</div>
+        <h2 id="login-title">ROYAL CASINO</h2>
+        <p id="login-subtitle" style="color:#bbb; font-size:12px; margin-bottom:20px;">Register to create your Wallet</p>
+        <div class="modal-row">
+          <input type="text" id="user-name" class="login-input" placeholder="Enter Nickname" />
+          <input type="number" id="user-mobile" class="login-input" placeholder="Mobile Number" />
+          <button class="hub-btn deposit-btn" id="btn-login" onclick="startAppSession()">CREATE ID & SECURE LOCK</button>
         </div>
-        <div class="bell-icon">🔔<div class="bell-badge">8</div></div>
-      </div>
-
-      <div class="wallet-card">
-        <div class="shield-icon">🛡️</div>
-        <div class="wallet-title">Wallet Balance</div>
-        <div class="wallet-balance-row">
-          <div class="balance-amt">₹ <span id="display-balance">0.00</span></div>
-          <button class="add-btn" onclick="openModal('depositModal')">+</button>
-        </div>
-        <div class="vip-progress">
-          <div class="progress-labels"><span>VIP Progress</span><span>70%</span></div>
-          <div class="progress-bar"><div class="progress-fill"></div></div>
-        </div>
-      </div>
-
-      <div class="tournament-banner">
-        <div class="trophy-icon">🏆</div>
-        <h2 class="tour-title">DAILY<br>TOURNAMENT</h2>
-        <div class="tour-sub">WIN EXCITING PRIZES</div>
-        <button class="play-now-btn">PLAY NOW</button>
-      </div>
-
-      <div class="trust-badges">
-        <div class="badge"><i style="color:#22c55e;">⚡</i><span>Instant<br>Withdrawals</span></div>
-        <div class="badge"><i style="color:#0ea5e9;">🛡️</i><span>Fair Play<br>Certified</span></div>
-        <div class="badge"><i style="color:#eab308;">🔒</i><span>Secure<br>Payments</span></div>
-      </div>
-
-      <div class="section-header">
-        <h3 class="section-title">Live Winners</h3>
-        <a href="#" class="view-all">View All</a>
-      </div>
-      <div class="winners-scroll">
-        <div class="winner-card">
-          <div class="win-avatar">👨</div>
-          <div class="win-info"><h4>Ravi won</h4><p class="amt">₹ 45,000</p><p class="time">2m ago</p></div>
-        </div>
-        <div class="winner-card">
-          <div class="win-avatar">👦</div>
-          <div class="win-info"><h4>Ankit won</h4><p class="amt">₹ 32,000</p><p class="time">5m ago</p></div>
-        </div>
-        <div class="winner-card">
-          <div class="win-avatar">🧔</div>
-          <div class="win-info"><h4>Karan won</h4><p class="amt">₹ 25,000</p><p class="time">7m ago</p></div>
-        </div>
-      </div>
-
-      <div class="section-header">
-        <h3 class="section-title">Popular Games</h3>
-        <a href="#" class="view-all">View All</a>
-      </div>
-      
-      <div class="games-grid">
-        <div class="game-card" onclick="switchView('view-cointoss')">
-          <div class="game-icon-area bg-coin">🪙</div>
-          <div class="game-name">Royal Coin Toss</div>
-          <div class="game-players">12.4k Playing</div>
-        </div>
-        <div class="game-card" onclick="alert('Wingo Lottery unlocking soon!')">
-          <div class="tag tag-hot">HOT</div>
-          <div class="game-icon-area bg-wingo">
-            <span style="font-size:25px;position:absolute;left:10px;">🔴</span>
-            <span style="font-size:45px;z-index:2;color:#fff;">5</span>
-            <span style="font-size:25px;position:absolute;right:10px;">🟢</span>
-          </div>
-          <div class="game-name">Wingo Lottery</div>
-          <div class="game-players">8.7k Playing</div>
-        </div>
-        <div class="game-card" onclick="alert('7 Up 7 Down unlocking soon!')">
-          <div class="game-icon-area bg-dice">🎲</div>
-          <div class="game-name">7 Up 7 Down</div>
-          <div class="game-players">15.6k Playing</div>
-        </div>
-        <div class="game-card" onclick="alert('Live Tables full!')">
-          <div class="tag tag-live">LIVE</div>
-          <div class="game-icon-area bg-roulette">🎡</div>
-          <div class="game-name">Live Roulette</div>
-          <div class="game-players">9.3k Playing</div>
-        </div>
-        <div class="game-card" onclick="alert('Slots Maintenance!')">
-          <div class="game-icon-area bg-slots">🎰</div>
-          <div class="game-name">Slots</div>
-          <div class="game-players">20.1k Playing</div>
-        </div>
-        <div class="game-card" onclick="alert('Sports Betting off-season!')">
-          <div class="game-icon-area bg-sports">⚽</div>
-          <div class="game-name">Sports</div>
-          <div class="game-players">18.2k Playing</div>
-        </div>
+        <p style="color:#ff3366; font-size:12px; margin-top:15px; display:none; line-height:1.5;" id="login-error"></p>
       </div>
     </div>
 
-    <div id="view-cointoss" class="view-section">
-      <div class="ct-arena">
-        <div class="ct-header">
-          <button class="back-btn" onclick="switchView('view-home')">⬅ Back</button>
+    <canvas id="confetti-canvas"></canvas>
+
+    <div class="modal-overlay" id="fundsModal">
+      <div class="modal-card" id="funds-main">
+        <h2>ROYAL WALLET</h2>
+        <p style="color: #bbb; font-size: 13px; margin: 5px 0 0 0; font-family: 'Montserrat', sans-serif;">Add or Cashout Real Money</p>
+        <div class="modal-row">
+          <button class="hub-btn deposit-btn" onclick="openDeposit()">📥 Add Funds</button>
+          <button class="hub-btn withdraw-btn" onclick="openWithdraw()">📤 Withdraw</button>
+          <button class="hub-btn history-btn" onclick="openHistory()">📜 TXN HISTORY</button>
         </div>
         
-        <div class="vs-box">
-          <div class="player-col"><div class="avt" style="border-color:#ef4444;">🤖</div><div class="nme">System</div></div>
-          <div class="vs-txt">VS</div>
-          <div class="player-col"><div class="avt">👨‍💻</div><div class="nme" id="ct-player-name">You</div></div>
+        <div style="margin-top: 25px; border-top: 1px dashed var(--gold-royal); padding-top: 15px;">
+          <p style="color: var(--gold-royal); font-size: 13px; margin: 0 0 8px 0; font-weight: bold; letter-spacing: 1px;">🎁 REDEEM SPECIAL COUPON</p>
+          <input type="text" id="coupon-code-input" class="login-input" placeholder="Enter Coupon Code" style="text-transform: uppercase; width: 85%; margin-bottom: 10px;" />
+          <button class="hub-btn deposit-btn" onclick="submitCoupon()" style="padding: 10px; font-size: 12px; width: 90%;">REDEEM CODE</button>
         </div>
+        <div class="close-modal" onclick="toggleModal('fundsModal', false)">Go Back to Game</div>
+      </div>
 
-        <div class="coin-wrapper">
-          <div class="coin-3d" id="c-obj">
-            <div class="c-face c-heads">HEADS</div>
-            <div class="c-face c-tails">TAILS</div>
-          </div>
+      <div class="modal-card" id="deposit-screen" style="display:none;">
+        <h2>DEPOSIT FUNDS</h2>
+        <div class="modal-row" id="qr-dynamic-area">
+          <input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" onblur="validateDeposit()"/>
+          <button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI LINK</button>
         </div>
+        <div class="close-modal" onclick="backToFundsMain()">Back</div>
+      </div>
 
-        <div class="bottom-controls">
-          <div class="status-msg" id="ct-status">AWAITING PREDICTION...</div>
-          
-          <div class="amt-row">
-            <button class="amt-btn" onclick="adjWager(-100)">-</button>
-            <div style="color:var(--gold-mid); font-weight:800;">₹ <input type="number" id="inp-wager" class="amt-inp" value="100" readonly/></div>
-            <button class="amt-btn" onclick="adjWager(100)">+</button>
+      <div class="modal-card" id="withdraw-screen" style="display:none;">
+        <h2>WITHDRAW WINNINGS</h2>
+        <div class="modal-row">
+          <input type="number" id="withdraw-amount" class="login-input" placeholder="Amount to Withdraw" />
+          <input type="text" id="withdraw-upi" class="login-input" placeholder="Enter UPI ID" />
+          <button class="hub-btn withdraw-btn" onclick="submitWithdrawal()">SUBMIT WITHDRAWAL</button>
+        </div>
+        <p style="color: #ff3366; font-size: 12px; margin-top: 12px; font-weight: bold; text-shadow: 0 0 5px rgba(255,0,0,0.3);">NOTE: Minimum withdrawal amount should be 1000 or above.</p>
+        <div class="close-modal" onclick="backToFundsMain()">Back</div>
+      </div>
+
+      <div class="modal-card" id="history-screen" style="display:none;">
+        <h2>TRANSACTION HISTORY</h2>
+        <div id="history-list" style="margin-top: 15px; max-height: 350px; overflow-y: auto;">
+            <p style="color:#aaa; font-size: 12px;">Loading records...</p>
+        </div>
+        <div class="close-modal" onclick="backToFundsMain()">Back</div>
+      </div>
+
+    </div>
+
+    <div class="modal-overlay" id="pvpModal">
+      <div class="modal-card" id="pvp-options">
+        <h2>PLAY WITH FRIEND</h2>
+        <div class="modal-row">
+          <button class="hub-btn deposit-btn" onclick="createRoom()">🏠 Create Room (Host)</button>
+          <p style="color:#aaa; font-size:12px; margin:0;">OR</p>
+          <input type="number" id="join-code-input" class="login-input" placeholder="Enter 4-Digit Code" />
+          <button class="hub-btn deposit-btn" onclick="joinRoom()">🤝 Join Room</button>
+        </div>
+        <div class="close-modal" onclick="toggleModal('pvpModal', false)">Cancel</div>
+      </div>
+      
+      <div class="modal-card" id="pvp-waiting" style="display:none;">
+        <h2>ROOM CREATED</h2>
+        <div style="font-size: 28px; color: #00ff99; letter-spacing: 5px; font-family: 'Montserrat'; margin: 10px 0; font-weight:900;" id="my-room-code">----</div>
+        <p style="color:#00f0ff; font-size:12px;" id="room-wager-info"></p>
+        <div style="color:#ffd700; margin-top:10px; font-size: 14px;">⏳ Waiting for friend to join...</div>
+      </div>
+
+      <div class="modal-card" id="pvp-challenge-pop" style="display:none;">
+        <h2>CHALLENGE DETAILS ⚔️</h2>
+        <p style="color:#fffde7; font-size:15px; margin: 15px 0 5px 0;">Opponent has modified the match terms:</p>
+        <div style="background: rgba(0,0,0,0.6); padding: 12px; border-radius: 10px; border: 1px solid var(--gold-royal); margin-bottom: 15px;">
+          <p style="font-size: 18px; color: #00ff99; margin: 4px 0;">Wager Value: <strong id="challenge-wager-txt" style="font-family:'Montserrat';">₹0</strong></p>
+          <p style="font-size: 18px; color: var(--gold-royal); margin: 4px 0;">Chosen Prediction: <strong id="challenge-side-txt" style="font-family:'Cinzel';">HEADS</strong></p>
+        </div>
+        <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Game starts instantly once you hit Accept.</p>
+        <div class="modal-row">
+          <button class="hub-btn deposit-btn" onclick="acceptPvpChallenge()">✅ ACCEPT & PLAY</button>
+          <button class="hub-btn withdraw-btn" onclick="clickPvpExit()">❌ REJECT & EXIT</button>
+        </div>
+      </div>
+
+      <div class="modal-card" id="pvp-post-match" style="display:none;">
+        <h2>GAME OVER</h2>
+        <p id="pvp-match-result-text" style="font-size:18px; font-weight:bold; margin:15px 0;"></p>
+        <div class="modal-row">
+          <button class="hub-btn deposit-btn" onclick="clickPvpPlayAgain()">🔄 PLAY AGAIN</button>
+          <button class="hub-btn withdraw-btn" onclick="clickPvpExit()">❌ EXIT GAME</button>
+        </div>
+      </div>
+
+      <div class="modal-card" id="pvp-rematch-prompt" style="display:none;">
+        <h2>REMATCH REQUESTED!</h2>
+        <p style="color:#fffde7; font-size:14px; margin-bottom:15px;">Your friend wants to play another round. This time they will decide the settings!</p>
+        <div class="modal-row">
+          <button class="hub-btn deposit-btn" onclick="responseRematch('join')">✅ JOIN</button>
+          <button class="hub-btn withdraw-btn" onclick="responseRematch('exit')">❌ EXIT</button>
+        </div>
+      </div>
+
+      <div class="modal-card" id="pvp-rematch-setup" style="display:none;">
+        <h2>YOUR TURN TO DECIDE 👑</h2>
+        <p style="color:#aaa; font-size:12px;">Set the amount and select your side for this round:</p>
+        <div class="modal-row">
+          <input type="number" id="pvp-rematch-wager" class="login-input" value="100" />
+          <div style="display:flex; gap:10px;">
+            <button id="rematch-btn-heads" class="side-btn" style="flex:1;" onclick="selectRematchSide('heads')">HEADS</button>
+            <button id="rematch-btn-tails" class="side-btn" style="flex:1;" onclick="selectRematchSide('tails')">TAILS</button>
           </div>
-          
-          <div class="side-row">
-            <button class="side-btn" id="btn-heads" onclick="pickSide('heads')">HEADS</button>
-            <button class="side-btn" id="btn-tails" onclick="pickSide('tails')">TAILS</button>
-          </div>
-          
-          <button class="big-btn" id="btn-play" onclick="playGame()" style="margin:0;">PLAY GLOBAL</button>
+          <button class="action-btn" onclick="submitRematchChoices()">SEND CHALLENGE TERM</button>
         </div>
       </div>
     </div>
 
-    <div class="bottom-nav">
-      <div class="nav-item active" onclick="switchView('view-home')">
-        <div class="nav-icon">🏠</div><span>Home</span><div class="nav-indicator"></div>
-      </div>
-      <div class="nav-item" onclick="alert('Games Directory loading...')">
-        <div class="nav-icon">🎮</div><span>Games</span><div class="nav-indicator"></div>
-      </div>
-      <div class="nav-item" onclick="alert('Rewards claiming section coming soon!')">
-        <div class="nav-icon">🎁</div><span>Rewards</span><div class="nav-indicator"></div>
-      </div>
-      <div class="nav-item" onclick="openModal('depositModal')">
-        <div class="nav-icon">💼</div><span>Wallet</span><div class="nav-indicator"></div>
-      </div>
-      <div class="nav-item" onclick="alert('Profile Settings coming soon!')">
-        <div class="nav-icon">👤</div><span>Profile</span><div class="nav-indicator"></div>
+    <div>
+      <div class="header"><h1>ROYAL COIN TOSS</h1></div>
+      <div class="fair-badge">🔒 Provably Fair RNG Secured</div>
+      <div class="top-balance-bar">
+        <div><div class="account-label">Account Balance</div><div class="balance-display" id="balance-txt">₹0.00</div></div>
+        <button id="funds-btn" class="funds-nav-btn" onclick="toggleModal('fundsModal', true)">💰 FUNDS ➕</button>
       </div>
     </div>
 
-    <div class="modal-overlay" id="loginModal" style="display:flex;">
-      <div class="modal-content">
-        <div style="font-size:50px; margin-bottom:10px;">👑</div>
-        <h2 style="color:#fff; margin:0 0 5px;">LUCKY ROYAL</h2>
-        <p style="color:var(--text-muted); font-size:12px; margin-bottom:20px;">Create Profile to start earning</p>
-        <input type="text" id="log-name" class="input-field" placeholder="Enter Nickname" />
-        <input type="number" id="log-phone" class="input-field" placeholder="Mobile Number" />
-        <button class="big-btn" onclick="doLogin()">START PLAYING</button>
-      </div>
+    <div class="vs-panel">
+      <div class="profile"><div class="avatar bot-avatar" id="bot-img">🤖</div><div class="name" id="bot-name">SYS.SCAN...</div></div>
+      <div class="vs-text">VS</div>
+      <div class="profile"><div class="avatar">👨‍💻</div><div class="name" id="player-display-name">Guest</div></div>
     </div>
 
-    <div class="modal-overlay" id="depositModal">
-      <div class="modal-content">
-        <h2 style="color:var(--gold-mid); margin:0 0 15px;">ADD FUNDS</h2>
-        <input type="number" id="dep-amt" class="input-field" placeholder="Enter Amount (₹)" />
-        <button class="big-btn" onclick="submitDeposit()">GENERATE UPI LINK</button>
-        <p style="color:var(--text-muted); font-size:12px; margin-top:15px; cursor:pointer;" onclick="closeModal('depositModal')">Cancel</p>
-      </div>
-    </div>
+    <div class="coin-container"><div class="coin" id="coin-object"><div class="coin-face coin-heads">HEADS</div><div class="coin-face coin-tails">TAILS</div></div></div>
+    <div class="result-panel" id="status-terminal">AWAITING PREDICTION...</div>
 
-  </div> <script>
-    const socket = io();
-    let balance = 0; let wager = 100; let side = null;
-    let uName = localStorage.getItem('lrName') || ""; 
-    let uPhone = localStorage.getItem('lrPhone') || "";
+    <div>
+      <div class="controls">
+        <div class="wager-selector" id="wager-selector-box">
+          <button class="wager-btn" onclick="changeWager(-100)">-</button>
+          <span class="wager-value">Amount: ₹ <input type="number" id="wager-input" value="100" onfocus="this.value=''" onblur="validateWager()"/></span>
+          <button class="wager-btn" onclick="changeWager(100)">+</button>
+        </div>
+        <div class="side-row">
+          <button id="btn-heads" class="side-btn heads-btn" onclick="selectSide('heads')">HEADS</button>
+          <button id="btn-tails" class="side-btn tails-btn" onclick="selectSide('tails')">TAILS</button>
+        </div>
+        <button class="action-btn" id="toss-button" onclick="startRoyalGame()">PLAY GLOBAL</button>
+        <button class="pvp-btn" id="pvp-main-btn" onclick="openPvPMenu()">⚔️ PLAY WITH FRIEND</button>
+      </div>
+      <div class="live-ticker-patti"><div class="ticker-wrap"><div class="ticker-text" id="patti-txt">⚡ Connecting Live Rooms...</div></div></div>
+    </div>
+  </div>
+
+  <script>
+    const bgContainer = document.getElementById('bg-coins-container');
+    for(let i=0; i<15; i++){
+        let c = document.createElement('div'); c.className = 'bg-coin';
+        c.style.left = Math.random() * 100 + '%'; c.style.top = Math.random() * 100 + '%';
+        c.style.animationDuration = (Math.random() * 4 + 3) + 's'; c.style.animationDelay = '-' + (Math.random() * 5) + 's';
+        bgContainer.appendChild(c);
+    }
+
+    const socket = io(); 
+    let currentBalance = 0; let selectedWager = 100; let lockedSide = null;
+    let userName = localStorage.getItem('royalUserName') || ""; 
+    let userPhone = localStorage.getItem('royalUserPhone') || ""; 
+    let savedBioCred = localStorage.getItem('royalBioCred');
+    let rematchSide = null;
+    let userTxHistory = [];
+
     const MY_UPI_ID = "royalcasino@ybl"; 
 
-    // SPA Routing
-    function switchView(viewId) {
-        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-        document.getElementById(viewId).classList.add('active');
-        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-        if(viewId === 'view-home') document.querySelectorAll('.nav-item')[0].classList.add('active');
-    }
-
-    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-    // Session Management
-    window.onload = () => { if(uName && uPhone) { document.getElementById('loginModal').style.display = 'none'; syncUser(); } }
+    function bufferEncode(value) { return btoa(String.fromCharCode.apply(null, new Uint8Array(value))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
+    function bufferDecode(value) { return Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)); }
     
-    function doLogin() {
-        let n = document.getElementById('log-name').value; let p = document.getElementById('log-phone').value;
-        if(!n || !p) return alert('Please fill all details!');
-        localStorage.setItem('lrName', n); localStorage.setItem('lrPhone', p);
-        uName = n; uPhone = p;
-        document.getElementById('loginModal').style.display = 'none';
-        syncUser();
+    socket.on('connect', () => {
+        if(userName && userPhone) { socket.emit('setUserData', { name: userName, phone: userPhone }); }
+    });
+
+    function updateGuidance() {
+        document.getElementById("funds-btn").classList.remove("glitter-active");
+        document.getElementById("wager-selector-box").classList.remove("glitter-active");
+        document.getElementById("btn-heads").classList.remove("glitter-active");
+        document.getElementById("btn-tails").classList.remove("glitter-active");
+        document.getElementById("toss-button").classList.remove("glitter-active");
+        if(document.getElementById("toss-button").disabled) return;
+        
+        if (currentBalance < 100) { document.getElementById("funds-btn").classList.add("glitter-active"); } 
+        else if (!lockedSide) { document.getElementById("wager-selector-box").classList.add("glitter-active"); document.getElementById("btn-heads").classList.add("glitter-active"); document.getElementById("btn-tails").classList.add("glitter-active"); } 
+        else { document.getElementById("toss-button").classList.add("glitter-active"); }
     }
 
-    function syncUser() {
-        document.getElementById('home-name').innerText = uName;
-        document.getElementById('ct-player-name').innerText = uName;
-        socket.emit('setUserData', { name: uName, phone: uPhone });
+    window.onload = () => {
+        if(userPhone && savedBioCred) {
+            document.getElementById('user-name').style.display = 'none';
+            document.getElementById('user-mobile').style.display = 'none';
+            document.getElementById('login-icon').innerHTML = "🔒";
+            document.getElementById('login-icon').className = "lock-icon";
+            document.getElementById('login-title').innerText = "WALLET LOCKED";
+            document.getElementById('login-subtitle').innerText = "Welcome back, " + userName;
+            document.getElementById('btn-login').innerText = "🔓 UNLOCK APP";
+        }
+        updateGuidance();
+    };
+
+    // ✅ ANTI-GLITCH LOGIN FALLBACK
+    function resetLogin() {
+        localStorage.removeItem('royalBioCred');
+        localStorage.removeItem('royalUserName');
+        localStorage.removeItem('royalUserPhone');
+        window.location.reload();
     }
 
-    // Socket Responses
-    socket.on('updateBalance', (d) => { balance = d.newBalance; document.getElementById('display-balance').innerText = balance + ".00"; });
-    socket.on('error', (e) => { alert(e.message); document.getElementById('btn-play').disabled = false; });
+    async function startAppSession() {
+        let nameInput = document.getElementById('user-name').value;
+        let phoneInput = document.getElementById('user-mobile').value;
+        let errorTxt = document.getElementById('login-error');
+        let btn = document.getElementById('btn-login');
 
-    // Deposit Logic
-    function submitDeposit() {
-        let amt = parseInt(document.getElementById('dep-amt').value);
-        if(isNaN(amt) || amt < 100) return alert('Minimum deposit ₹100');
-        let upi = `upi://pay?pa=${MY_UPI_ID}&pn=LuckyRoyal&am=${amt}&cu=INR`;
-        window.location.href = upi;
-        setTimeout(() => { alert("Once you pay via UPI app, funds will be requested to Admin."); closeModal('depositModal'); }, 2000);
+        if(userPhone && savedBioCred) {
+            try {
+                btn.innerText = "VERIFYING...";
+                const publicKey = { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ id: bufferDecode(savedBioCred), type: 'public-key' }], userVerification: 'required', timeout: 60000 };
+                await navigator.credentials.get({ publicKey });
+                finalizeLogin();
+            } catch(e) { 
+                btn.innerText = "🔓 UNLOCK APP"; 
+                // ✅ ADDED RESET BUTTON IF THEY CANCEL/FAIL BIOMETRIC
+                errorTxt.innerHTML = "Authentication Failed!<br><a href='#' onclick='resetLogin()' style='color:#ffd700; text-decoration:underline;'>Click here to Login with new details</a>"; 
+                errorTxt.style.display = "block"; 
+            }
+        } else {
+            if(nameInput.trim() === "" || phoneInput.trim() === "") { errorTxt.innerText = "Please fill both fields!"; errorTxt.style.display = "block"; return; }
+            if(!window.PublicKeyCredential) { localStorage.setItem('royalUserName', nameInput); localStorage.setItem('royalUserPhone', phoneInput); userName = nameInput; userPhone = phoneInput; finalizeLogin(); return; }
+            try {
+                btn.innerText = "CREATING LOCK...";
+                const publicKey = { challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: "Royal Casino", id: window.location.hostname }, user: { id: crypto.getRandomValues(new Uint8Array(16)), name: nameInput, displayName: nameInput }, pubKeyCredParams: [{alg: -7, type: "public-key"}, {alg: -257, type: "public-key"}], authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }, timeout: 60000, attestation: "none" };
+                const cred = await navigator.credentials.create({ publicKey });
+                localStorage.setItem('royalBioCred', bufferEncode(cred.rawId)); localStorage.setItem('royalUserName', nameInput); localStorage.setItem('royalUserPhone', phoneInput);
+                userName = nameInput; userPhone = phoneInput; finalizeLogin();
+            } catch (e) { 
+                btn.innerText = "CREATE ID & SECURE LOCK"; 
+                errorTxt.innerText = "Error: Please allow Screen Lock to continue!"; 
+                errorTxt.style.display = "block"; 
+            }
+        }
     }
 
-    // Coin Toss Logic
-    function adjWager(val) { wager += val; if(wager < 100) wager = 100; document.getElementById('inp-wager').value = wager; }
-    function pickSide(s) { side = s; document.getElementById('btn-heads').classList.remove('active'); document.getElementById('btn-tails').classList.remove('active'); document.getElementById('btn-'+s).classList.add('active'); document.getElementById('ct-status').innerText = 'LOCKED: ' + s.toUpperCase(); }
+    function finalizeLogin() {
+        document.getElementById("player-display-name").innerHTML = userName;
+        document.getElementById("login-screen").style.display = "none";
+        socket.emit('setUserData', { name: userName, phone: userPhone });
+        if(audioCtx.state === 'suspended') audioCtx.resume(); playSound('click');
+        updateGuidance();
+    }
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        try {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination);
+            if(type === 'click') { osc.frequency.setValueAtTime(800, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.05); }
+            else if(type === 'flip') { 
+                osc.type = 'sine'; 
+                osc.frequency.setValueAtTime(350, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.12); 
+                gain.gain.setValueAtTime(0.04, audioCtx.currentTime); 
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.12); 
+            }
+            else if(type === 'win') { osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
+            else if(type === 'loss') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
+        } catch(e) {}
+    }
+    const canvas = document.getElementById("confetti-canvas"); const ctx = canvas.getContext("2d"); let particles = [];
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; } window.addEventListener('resize', resizeCanvas); resizeCanvas();
+    function spawnGoldRain() { particles = []; for(let i=0; i<45; i++) { particles.push({ x: Math.random() * canvas.width, y: Math.random() * -200 - 50, r: Math.random() * 8 + 10, tilt: Math.random() * Math.PI, tiltSpeed: Math.random() * 0.2 + 0.05, speedY: Math.random() * 4 + 3 }); } requestAnimationFrame(updateGoldRain); }
+    function updateGoldRain() { ctx.clearRect(0, 0, canvas.width, canvas.height); let active = false; particles.forEach(p => { p.y += p.speedY; p.tilt += p.tiltSpeed; ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, Math.abs(Math.sin(p.tilt))); ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 2 * Math.PI); let grad = ctx.createLinearGradient(-p.r, -p.r, p.r, p.r); grad.addColorStop(0, "#fffde7"); grad.addColorStop(0.3, "#ffd700"); grad.addColorStop(1, "#b8860b"); ctx.fillStyle = grad; ctx.fill(); ctx.restore(); if(p.y < canvas.height + 50) active = true; }); if(active) requestAnimationFrame(updateGoldRain); }
+
+    function toggleModal(id, show) { playSound('click'); document.getElementById(id).style.display = show ? "flex" : "none"; updateGuidance(); }
     
-    function playGame() {
-        if(!side) return alert('Select Heads or Tails!'); if(wager > balance) return alert('Insufficient Balance!');
-        document.getElementById('btn-play').disabled = true; document.getElementById('ct-status').innerText = 'SEARCHING LOBBY...';
-        socket.emit('placeBet', { side: side, amount: wager, phone: uPhone, name: uName });
+    function backToFundsMain() { 
+        document.getElementById("funds-main").style.display = "block"; 
+        document.getElementById("deposit-screen").style.display = "none"; 
+        document.getElementById("withdraw-screen").style.display = "none"; 
+        document.getElementById("history-screen").style.display = "none";
+        document.getElementById("qr-dynamic-area").innerHTML = `<input type="number" id="deposit-amount" class="login-input" placeholder="Enter Amount (₹)" onblur="validateDeposit()"/><button class="hub-btn deposit-btn" onclick="showManualQRCode()">GENERATE UPI LINK</button>`; 
+    }
+    
+    function openDeposit() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("deposit-screen").style.display = "block"; }
+    function openWithdraw() { playSound('click'); document.getElementById("funds-main").style.display = "none"; document.getElementById("withdraw-screen").style.display = "block"; }
+    function openHistory() { 
+        playSound('click'); 
+        document.getElementById("funds-main").style.display = "none"; 
+        document.getElementById("history-screen").style.display = "block";
+        socket.emit('fetchHistory', { phone: userPhone });
     }
 
-    socket.on('matchmakingStarted', () => { 
-      document.getElementById('ct-status').innerText = 'TOSSING...';
-      document.getElementById('c-obj').className = 'coin-3d flipping'; 
+    socket.on('updateHistory', (txList) => {
+        userTxHistory = txList;
+        const listDiv = document.getElementById("history-list");
+        listDiv.innerHTML = "";
+        if(txList.length === 0) {
+            listDiv.innerHTML = "<p style='color:#aaa; font-size:12px;'>No transactions yet.</p>";
+            return;
+        }
+
+        txList.forEach(tx => {
+            let color = "#aaa";
+            if(tx.status.includes("Success")) color = "#00ff99";
+            if(tx.status.includes("Rejected") || tx.status.includes("Cancelled")) color = "#ff3366";
+            if(tx.status.includes("Processing")) color = "#ffd700";
+
+            let typeColor = tx.type === "Withdraw" ? "#ff4b2b" : "#00b4db";
+
+            let cancelBtnHtml = "";
+            if(tx.type === "Withdraw" && tx.status.includes("Processing")) {
+                cancelBtnHtml = `<button class="cancel-tx-btn" onclick="cancelWithdrawReq('${tx.txId}')">CANCEL & REFUND</button>`;
+            }
+
+            listDiv.innerHTML += `
+                <div class="tx-item">
+                    <div class="tx-header">
+                        <strong style="color:${typeColor};">${tx.type}</strong>
+                        <strong style="color:var(--gold-royal);">₹${tx.amount}</strong>
+                    </div>
+                    <div class="tx-date">${tx.date} | ${tx.detail}</div>
+                    <div class="tx-stat" style="color:${color};">${tx.status}</div>
+                    ${cancelBtnHtml}
+                </div>
+            `;
+        });
+    });
+
+    function cancelWithdrawReq(txId) {
+        if(confirm("Are you sure you want to cancel this withdrawal? Funds will be returned to your wallet immediately.")) {
+            playSound('click');
+            socket.emit('cancelWithdrawal', { phone: userPhone, txId: txId });
+            alert("Withdrawal Cancelled! Amount refunded to wallet.");
+        }
+    }
+
+    function submitCoupon() {
+        let code = document.getElementById("coupon-code-input").value.trim().toUpperCase();
+        if(code === "") return alert("Please enter coupon code!");
+        playSound('click'); socket.emit('redeemCoupon', { code: code, phone: userPhone, name: userName });
+    }
+    
+    socket.on('couponResult', (data) => {
+        if(data.status === 'success') { spawnGoldRain(); document.getElementById("coupon-code-input").value = ""; toggleModal('fundsModal', false); }
+        alert(data.message);
+    });
+
+    function validateDeposit() { 
+        let inputField = document.getElementById("deposit-amount"); 
+        if(inputField.value === "") return;
+        let val = parseInt(inputField.value); 
+        if (isNaN(val) || val < 100) val = 100; 
+        val = Math.round(val / 50) * 50; 
+        inputField.value = val; 
+    }
+    
+    function showManualQRCode() { 
+        let inputField = document.getElementById("deposit-amount");
+        if(inputField.value === "" || parseInt(inputField.value) < 100) {
+            alert("Please enter a valid amount (Minimum ₹100)");
+            inputField.value = 100;
+            return;
+        }
+        let amount = parseInt(inputField.value); 
+        let upiLink = `upi://pay?pa=${MY_UPI_ID}&pn=RoyalCasino&am=${amount}&cu=INR`;
+        document.getElementById("qr-dynamic-area").innerHTML = `
+            <h3 style="color:#ffd700; margin-bottom:5px; font-family:'Cinzel';">PAY ₹${amount}</h3>
+            <a href="${upiLink}" class="hub-btn deposit-btn" style="display:block; text-decoration:none; text-align:center; margin-bottom:15px; background: linear-gradient(90deg, #00c6ff, #0072ff); color:white; border:none;">🚀 PAY VIA UPI APP</a>
+            <p style="color:#aaa; font-size:11px; margin:0;">After paying, enter your 12-Digit UTR below:</p>
+            <input type="number" id="utr-number-input" class="login-input" placeholder="Enter 12-Digit UTR Number" />
+            <button class="hub-btn deposit-btn" onclick="submitUTR(${amount})">SUBMIT UTR</button>
+        `; 
+    }
+
+    function submitUTR(amount) { 
+        let utr = document.getElementById("utr-number-input").value; 
+        if(utr.trim().length !== 12) return alert("UTR must be 12 digits!"); 
+        
+        socket.emit('submitManualDeposit', { amount: amount, utr: utr, phone: userPhone }); 
+        
+        alert("Request Submitted! Your request is in progress, please wait some time.");
+        document.getElementById("deposit-screen").style.display = "none";
+        document.getElementById("history-screen").style.display = "block";
+    }
+
+    function submitWithdrawal() { 
+        let amount = parseInt(document.getElementById("withdraw-amount").value); 
+        let upiId = document.getElementById("withdraw-upi").value; 
+        
+        if (isNaN(amount) || amount < 1000) return alert("Minimum withdrawal is ₹1000!"); 
+        if(upiId.trim() === "" || amount > currentBalance) return alert("Invalid details or balance!"); 
+        
+        socket.emit('withdrawFunds', { amount: amount, upi: upiId, phone: userPhone }); 
+        
+        alert("Withdrawal Requested! Your request is in progress, please wait some time."); 
+        document.getElementById("withdraw-screen").style.display = "none";
+        document.getElementById("history-screen").style.display = "block";
+    }
+
+    function validateWager() {
+        let inputField = document.getElementById("wager-input"); let typedVal = parseInt(inputField.value);
+        if (isNaN(typedVal) || typedVal < 100) typedVal = 100;
+        typedVal = Math.round(typedVal / 100) * 100;
+        if (currentBalance > 0 && typedVal > currentBalance) { typedVal = Math.floor(currentBalance / 100) * 100; if(typedVal < 100) typedVal = 100; }
+        selectedWager = typedVal; inputField.value = selectedWager; updateGuidance();
+    }
+    function changeWager(val) { if(document.getElementById("toss-button").disabled) return; playSound('click'); selectedWager += val; if(selectedWager < 100) selectedWager = 100; document.getElementById("wager-input").value = selectedWager; validateWager(); }
+    function selectSide(side) { if(document.getElementById("toss-button").disabled) return; playSound('click'); validateWager(); lockedSide = side; document.getElementById("btn-heads").classList.remove('selected'); document.getElementById("btn-tails").classList.remove('selected'); document.getElementById("btn-" + side).classList.add('selected'); document.getElementById("status-terminal").innerHTML = `LOCKED ON: ${side.toUpperCase()}`; updateGuidance(); }
+
+    function startRoyalGame() {
+        validateWager(); if(!lockedSide) return alert("Select side first!"); if(selectedWager > currentBalance) return alert("Insufficient balance!");
+        playSound('click'); 
+        
+        document.getElementById("toss-button").disabled = true; 
+        document.getElementById("pvp-main-btn").style.pointerEvents = "none";
+        
+        updateGuidance();
+        document.getElementById("status-terminal").innerHTML = "SEARCHING GLOBAL LOBBY..."; document.getElementById("bot-name").innerHTML = "Searching..."; document.getElementById("bot-img").innerHTML = "⌛";
+        socket.emit('placeBet', { side: lockedSide, amount: selectedWager, phone: userPhone, name: userName });
+    }
+    
+    socket.on('updateBalance', (data) => { currentBalance = data.newBalance; document.getElementById("balance-txt").innerHTML = "₹" + currentBalance + ".00"; validateWager(); updateGuidance(); });
+    socket.on('liveTickerUpdate', (data) => { document.getElementById("patti-txt").innerHTML = data.text; });
+    socket.on('error', (data) => { alert(data.message); document.getElementById("toss-button").disabled = false; document.getElementById("pvp-main-btn").style.pointerEvents = "auto"; updateGuidance(); });
+
+    socket.on('matchmakingStarted', (data) => { 
+        document.getElementById("status-terminal").innerHTML = "MATCH FOUND! READY..."; 
+        document.getElementById("bot-name").innerHTML = data.bot.name; 
+        document.getElementById("bot-img").innerHTML = data.bot.avatar; 
+        let flipAudioInterval = setInterval(() => { playSound('flip'); }, 140); 
+        setTimeout(() => { clearInterval(flipAudioInterval); }, 5000); 
+        document.getElementById("status-terminal").innerHTML = "TOSSING!"; 
+        document.getElementById("coin-object").className = "coin flipping"; 
     });
     
-    socket.on('gameResult', (d) => {
-        const c = document.getElementById('c-obj');
-        c.className = d.tossResult === 'heads' ? 'coin-3d stop-h' : 'coin-3d stop-t';
+    socket.on('gameResult', (data) => {
+        const coin = document.getElementById("coin-object");
+        coin.className = data.tossResult === 'heads' ? "coin coin-stop-heads" : "coin coin-stop-tails";
+        
         setTimeout(() => {
-            document.getElementById('ct-status').innerText = d.status === 'won' ? '🎉 YOU WON DOUBLE!' : '❌ YOU LOST';
-            document.getElementById('ct-status').style.color = d.status === 'won' ? '#22c55e' : '#ef4444';
-            setTimeout(() => { 
-                document.getElementById('ct-status').innerText = 'AWAITING PREDICTION...'; 
-                document.getElementById('ct-status').style.color = 'var(--gold-light)';
-                document.getElementById('btn-play').disabled = false; 
-            }, 3000);
-        }, 600);
+            if(data.status === 'won') { playSound('win'); spawnGoldRain(); document.getElementById("status-terminal").className = "result-panel win"; } 
+            else { playSound('loss'); document.getElementById("status-terminal").className = "result-panel loss"; }
+            document.getElementById("status-terminal").innerHTML = `${data.status.toUpperCase()}! Result: ${data.tossResult.toUpperCase()}`;
+
+            setTimeout(() => {
+                document.getElementById("status-terminal").className = "result-panel";
+                document.getElementById("status-terminal").innerHTML = "⏳ WAITING... NEXT ROUND IN 3s";
+
+                setTimeout(() => {
+                    document.getElementById("status-terminal").innerHTML = "AWAITING PREDICTION...";
+                    document.getElementById("bot-name").innerHTML = "SYS.SCAN...";
+                    document.getElementById("bot-img").innerHTML = "🤖";
+                    
+                    document.getElementById("toss-button").disabled = false; 
+                    document.getElementById("pvp-main-btn").style.pointerEvents = "auto";
+                    updateGuidance();
+
+                    if(data.isPvp) {
+                        document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none";
+                        document.getElementById('pvp-match-result-text').innerText = data.status === 'won' ? "🎉 YOU WON DOUBLE POT!" : "😢 YOU LOST THIS ROUND!";
+                        document.getElementById('pvp-post-match').style.display = "block"; toggleModal('pvpModal', true);
+                    }
+                }, 3000); 
+
+            }, 1500); 
+
+        }, 600); 
     });
+
+    function openPvPMenu() { validateWager(); if(!lockedSide) return alert("Pehle HEADS ya TAILS select kijiye!"); if(selectedWager > currentBalance) return alert("Balance kam hai!"); document.getElementById('pvp-options').style.display = "block"; document.getElementById('pvp-waiting').style.display = "none"; toggleModal('pvpModal', true); }
+    function createRoom() { socket.emit('createRoom', { amount: selectedWager, side: lockedSide, phone: userPhone }); }
+    socket.on('roomCreated', (data) => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerHTML = data.code; document.getElementById('room-wager-info').innerHTML = `Wager: ₹${data.wager} | Side: ${data.side.toUpperCase()}`; });
+    function joinRoom() { const code = document.getElementById('join-code-input').value; if(code.length === 4) { socket.emit('joinRoom', { code: code, phone: userPhone }); } else { alert("Enter 4-Digit Code!"); } }
+
+    socket.on('pvpShowChallengePop', (data) => {
+        document.getElementById('pvp-options').style.display = "none";
+        document.getElementById('pvp-waiting').style.display = "none";
+        document.getElementById('pvp-post-match').style.display = "none";
+        document.getElementById('pvp-rematch-prompt').style.display = "none";
+        document.getElementById('pvp-rematch-setup').style.display = "none";
+        
+        document.getElementById('challenge-wager-txt').innerText = "₹" + data.wager;
+        document.getElementById('challenge-side-txt').innerText = data.side.toUpperCase();
+        
+        document.getElementById('pvp-challenge-pop').style.display = "block";
+        toggleModal('pvpModal', true);
+    });
+
+    function acceptPvpChallenge() {
+        playSound('click');
+        document.getElementById('pvp-challenge-pop').style.display = "none";
+        toggleModal('pvpModal', false);
+        socket.emit('pvpAcceptChallenge');
+    }
+
+    function clickPvpPlayAgain() {
+        if(currentBalance < 100) { alert("Insufficient Funds! Add money first."); toggleModal('pvpModal', false); toggleModal('fundsModal', true); return; }
+        playSound('click'); document.getElementById('pvp-post-match').innerHTML = "<h3 style='color:#ffd700;'>⏳ Waiting for friend's approval...</h3>"; socket.emit('pvpRequestRematch');
+    }
+    function clickPvpExit() { playSound('click'); socket.emit('pvpExitRoom'); toggleModal('pvpModal', false); }
+
+    socket.on('pvpPromptRematchInvite', () => { document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "block"; toggleModal('pvpModal', true); });
+
+    function responseRematch(action) {
+        playSound('click');
+        if(action === 'join' && currentBalance < 100) { alert("Insufficient Balance! Kripya deposit karein."); socket.emit('pvpRematchResponse', { action: 'exit' }); toggleModal('pvpModal', false); toggleModal('fundsModal', true); return; }
+        socket.emit('pvpRematchResponse', { action: action });
+    }
+
+    socket.on('pvpSetupTurnChoice', () => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "block"; rematchSide = null; document.getElementById('rematch-btn-heads').classList.remove('selected'); document.getElementById('rematch-btn-tails').classList.remove('selected'); toggleModal('pvpModal', true); });
+    socket.on('pvpWaitingForFriendTurn', () => { document.getElementById('pvp-options').style.display = "none"; document.getElementById('pvp-post-match').style.display = "none"; document.getElementById('pvp-rematch-prompt').style.display = "none"; document.getElementById('pvp-rematch-setup').style.display = "none"; document.getElementById('pvp-challenge-pop').style.display = "none"; document.getElementById('pvp-waiting').style.display = "block"; document.getElementById('my-room-code').innerText = "LOOP"; document.getElementById('room-wager-info').innerText = "Friend is deciding bet values & sides..."; toggleModal('pvpModal', true); });
+
+    function selectRematchSide(side) { playSound('click'); rematchSide = side; document.getElementById('rematch-btn-heads').classList.remove('selected'); document.getElementById('rematch-btn-tails').classList.remove('selected'); document.getElementById('rematch-btn-' + side).classList.add('selected'); }
+    function submitRematchChoices() {
+        let wager = parseInt(document.getElementById('pvp-rematch-wager').value); wager = Math.round(wager / 100) * 100; if(wager < 100) wager = 100;
+        if(wager > currentBalance) return alert("Insufficient balance for this bet!"); if(!rematchSide) return alert("Select your Side!");
+        playSound('click'); socket.emit('pvpSubmitRematchChoices', { wager: wager, side: rematchSide }); toggleModal('pvpModal', false);
+    }
+    
+    socket.on('pvpRematchMatchStarted', (data) => { 
+        toggleModal('pvpModal', false); 
+        document.getElementById("status-terminal").className = "result-panel"; 
+        document.getElementById("status-terminal").innerHTML = data.message; 
+        document.getElementById("bot-name").innerHTML = "FRIEND (P2)"; 
+        document.getElementById("bot-img").innerHTML = "😎"; 
+        let flipAudioInterval = setInterval(() => { playSound('flip'); }, 140); 
+        setTimeout(() => { clearInterval(flipAudioInterval); }, 5000); 
+        document.getElementById("coin-object").className = "coin flipping"; 
+    });
+    
+    socket.on('pvpRoomClosedNotify', (msg) => { alert(msg); toggleModal('pvpModal', false); });
   </script>
 </body>
 </html>
